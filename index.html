@@ -612,13 +612,14 @@ function renderSheet(){
           '<div class="err" id="errHeure" hidden>Choisissez une heure.</div>' +
         '</fieldset>' +
         '<fieldset>' +
-          '<legend>Votre nom</legend>' +
-          '<p class="hint">C\'est le nom que vous donnerez au comptoir.</p>' +
+          '<legend>Vos coordonnées</legend>' +
+          '<p class="hint">Le nom que vous donnerez au comptoir, et un numéro où le restaurant peut vous joindre si besoin.</p>' +
           '<label class="fld"><span>Prénom et nom</span>' +
             '<input type="text" name="nom" autocomplete="name" placeholder="Ex. Sarah Benali" required></label>' +
           '<div class="err" id="errNom" hidden>Entrez votre nom.</div>' +
-          '<label class="fld"><span>Téléphone <span style="font-weight:400;color:var(--muted)">(optionnel)</span></span>' +
-            '<input type="tel" name="tel" autocomplete="tel" placeholder="514 000-0000"></label>' +
+          '<label class="fld"><span>Téléphone</span>' +
+            '<input type="tel" name="tel" autocomplete="tel" inputmode="tel" placeholder="514 000-0000" required></label>' +
+          '<div class="err" id="errTel" hidden>Entrez un numéro de téléphone à 10 chiffres.</div>' +
           '<label class="fld"><span>Note pour la cuisine <span style="font-weight:400;color:var(--muted)">(optionnel)</span></span>' +
             '<textarea name="note" placeholder="Allergies, sans oignon, sauce à part…"></textarea></label>' +
         '</fieldset>' +
@@ -647,6 +648,7 @@ function renderSheet(){
         '<div class="num">' + esc(o.num) + '</div>' +
         '<dl>' +
           '<dt>Nom</dt><dd>' + esc(o.nom) + '</dd>' +
+          '<dt>Téléphone</dt><dd>' + esc(o.tel) + '</dd>' +
           '<dt>Service</dt><dd>' + esc(o.mode) + '</dd>' +
           '<dt>Heure</dt><dd>' + esc(o.heure) + '</dd>' +
           '<dt>Sous-total</dt><dd>' + money(o.total) + '</dd>' +
@@ -677,7 +679,7 @@ function orderText(o){
     "----------------------------\n" +
     o.mode.toUpperCase() + "  ·  " + o.heure + "\n" +
     "Nom : " + o.nom + "\n" +
-    (o.tel ? "Tél : " + o.tel + "\n" : "") +
+    "Tel : " + o.tel + "\n" +
     "----------------------------\n" +
     lines + "\n" +
     "----------------------------\n" +
@@ -750,11 +752,15 @@ document.addEventListener("submit", async e => {
   const mode = f.querySelector('input[name=mode]:checked');
   const heure = f.heure.value;
   const nom = f.nom.value.trim();
+  // Téléphone obligatoire : 10 chiffres (ou 11 commençant par 1).
+  const telDigits = f.tel.value.replace(/\D/g, "");
+  const telOk = telDigits.length === 10 || (telDigits.length === 11 && telDigits[0] === "1");
 
   $("#errMode").hidden = !!mode;
   $("#errHeure").hidden = !!heure;
   $("#errNom").hidden = nom.length >= 2;
-  if(!mode || !heure || nom.length < 2) return;
+  $("#errTel").hidden = telOk;
+  if(!mode || !heure || nom.length < 2 || !telOk) return;
 
   const btn = $("#submitBtn");
   btn.disabled = true;
