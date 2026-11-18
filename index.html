@@ -47,6 +47,11 @@ button{font:inherit;color:inherit;cursor:pointer}
 .status{margin-top:14px;border-radius:var(--r);padding:12px 14px;font-size:13.5px;line-height:1.45;border:1px solid}
 .status.open{background:var(--green-soft);border-color:#c7e0d3;color:#1e4d38}
 .status.closed{background:#fdeceb;border-color:#f3c9c5;color:#7d241b}
+.status.soon{background:var(--gold-soft);border-color:#e9d9bb;color:#54391a;font-size:14px}
+.status.soon a{color:#54391a;font-weight:700}
+.callbtn{display:block;margin-top:10px;background:var(--ink);color:#fff;text-align:center;
+  text-decoration:none;font-weight:700;font-size:15.5px;padding:15px;border-radius:12px}
+.callbtn:hover{opacity:.88}
 
 /* ---------- Category nav ---------- */
 .navbar{position:sticky;top:0;z-index:30;background:rgba(250,247,242,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
@@ -166,6 +171,12 @@ footer a{color:var(--gold);text-decoration:none;font-weight:600}
      ========================================================= -->
 <script>
 const CONFIG = {
+  // INTERRUPTEUR PRINCIPAL.
+  // false : la page montre le menu et les prix, sans panier ni commande.
+  // true  : la même adresse devient une vraie page de commande.
+  // À basculer le jour où le restaurant reçoit bien les notifications.
+  ordersEnabled: false,
+
   // Heures d'ouverture. 0 = dimanche, 1 = lundi … 6 = samedi.
   // null = fermé ce jour-là.
   hours: { 0:["11:00","21:30"],     // dimanche
@@ -469,6 +480,19 @@ function slots(){
 function renderStatus(){
   const box = $("#statusBox");
   const w = todayWindow(new Date());
+
+  // Mode menu seul : un bandeau qui renvoie vers le téléphone.
+  if(!CONFIG.ordersEnabled){
+    box.innerHTML = '<div class="status soon">' +
+      '<b>Le menu d\'Aroma Gourmet, au complet.</b><br>' +
+      'La commande en ligne arrive très bientôt. En attendant, appelez-nous au ' +
+      '<a href="tel:+1' + CONFIG.tel + '">' + CONFIG.telDisplay + '</a> — ' +
+      'sur place ou pour emporter.' +
+      '</div>' +
+      '<a class="callbtn" href="tel:+1' + CONFIG.tel + '">📞 Appeler pour commander</a>';
+    return;
+  }
+
   if(isOpenNow()){
     const sl = slots();
     box.innerHTML = '<div class="status open"><b>Ouvert maintenant.</b> ' +
@@ -514,6 +538,8 @@ function renderMenu(){
 function paintItem(key){
   const slot = document.querySelector('[data-act="' + key + '"]');
   if(!slot) return;
+  // Menu seul : aucun bouton d'ajout.
+  if(!CONFIG.ordersEnabled){ slot.innerHTML = ""; return; }
   const q = cart.get(key) || 0;
   const [cid, i] = key.split(":");
   const row = document.getElementById("it-" + cid + "-" + i);
@@ -532,7 +558,7 @@ function paintItem(key){
 
 function renderBar(){
   const n = count();
-  $("#bar").hidden = n === 0;
+  $("#bar").hidden = !CONFIG.ordersEnabled || n === 0;
   $("#barCount").textContent = n === 1 ? "1 article" : n + " articles";
   $("#barTotal").textContent = money(subtotal());
 }
@@ -799,6 +825,12 @@ document.addEventListener("submit", async e => {
 document.addEventListener("keydown", e => { if(e.key === "Escape" && !$("#sheet").hidden) closeSheet(); });
 
 /* ================= Démarrage ================= */
+// Le texte d'accroche change selon le mode.
+if(!CONFIG.ordersEnabled){
+  document.querySelector(".tagline").innerHTML =
+    "Burgers au pain maison · Montréal<br>Notre menu complet, avec les prix.";
+}
+
 $("#mapsLink").href = CONFIG.maps;
 $("#telLink").href = "tel:+1" + CONFIG.tel;
 $("#telLink2").href = "tel:+1" + CONFIG.tel;
