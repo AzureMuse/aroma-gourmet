@@ -226,7 +226,8 @@ const CONFIG = {
 <footer class="wrap">
   <b>Aroma Gourmet</b><br>
   1651 rue Ontario Est, Montréal · <a href="#" id="telLink2">438 531-6482</a><br>
-  Commande en ligne pour consommation sur place ou à emporter. Aucune livraison.
+  Commande en ligne pour consommation sur place ou à emporter, sans frais et sans commission.
+  Le restaurant ne livre pas lui-même&nbsp;; la livraison passe par Uber Eats, aux prix de la plateforme.
   Le paiement se fait au comptoir, à l'arrivée.
   <div class="halal">Tous nos produits sont halal.</div>
 </footer>
@@ -592,7 +593,7 @@ function renderSheet(){
           '</div>' +
           '<div class="err" id="errMode" hidden>Choisissez sur place, à emporter ou livraison.</div>' +
           '<div id="uberPanel" class="uber" hidden>' +
-            '<p>Pour être livré, votre commande se fait directement sur Uber&nbsp;Eats, qui s\'occupe du livreur et du paiement. Le menu et les prix y sont ceux du restaurant.</p>' +
+            '<p>Pour être livré, votre commande se fait sur Uber&nbsp;Eats, qui s\'occupe du livreur et du paiement. Attention&nbsp;: les prix affichés sur Uber&nbsp;Eats sont ceux de la plateforme et sont plus élevés qu\'au restaurant, en plus des frais de livraison.</p>' +
             '<a class="cta wide" href="' + esc(CONFIG.uberEats) + '" target="_blank" rel="noopener noreferrer">Commander la livraison sur Uber&nbsp;Eats</a>' +
             '<p class="hint">Pour manger sur place ou venir chercher au comptoir, revenez sur l\'un des deux autres choix&nbsp;: c\'est plus rapide et sans frais de livraison.</p>' +
           '</div>' +
