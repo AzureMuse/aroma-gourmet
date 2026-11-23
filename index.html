@@ -972,21 +972,21 @@ try {
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.08;
+  renderer.toneMappingExposure = .92;
 
   const scene = new THREE.Scene();
   scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), .04).texture;
-  scene.add(new THREE.HemisphereLight(0xfff1e0, 0x1a0b08, .55));
-  const key = new THREE.DirectionalLight(0xfff0dc, 1.9); key.position.set(4, 7, 6); scene.add(key);
-  const rim = new THREE.DirectionalLight(0xff3040, 2.2); rim.position.set(-5, 3, -6); scene.add(rim);
-  const rim2 = new THREE.DirectionalLight(0xffb070, 1.1); rim2.position.set(6, 2, -4); scene.add(rim2);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x2a1a14, .7));
+  const key = new THREE.DirectionalLight(0xffffff, 1.5); key.position.set(4, 7, 6); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xff4050, .7); rim.position.set(-5, 3, -6); scene.add(rim);
+  const rim2 = new THREE.DirectionalLight(0xffd2a0, .8); rim2.position.set(6, 2, -4); scene.add(rim2);
 
   // Centrer et mettre à l'échelle le burger
   const model = gltf.scene;
-  model.traverse(o => { if (o.isMesh) { o.material.envMapIntensity = .9; } });
+  model.traverse(o => { if (o.isMesh) { o.material.envMapIntensity = 1; } });
   const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
-  const s = 6 / Math.max(size.x, size.y, size.z);
+  const s = 5.2 / Math.max(size.x, size.y, size.z);
   model.position.copy(center).multiplyScalar(-s); model.scale.setScalar(s);
   const burger = new THREE.Group(); burger.add(model); scene.add(burger);
 
@@ -995,7 +995,7 @@ try {
   const g = sh.getContext("2d"), rg = g.createRadialGradient(64, 64, 0, 64, 64, 64);
   rg.addColorStop(0, "rgba(0,0,0,.7)"); rg.addColorStop(.6, "rgba(0,0,0,.25)"); rg.addColorStop(1, "rgba(0,0,0,0)");
   g.fillStyle = rg; g.fillRect(0, 0, 128, 128);
-  const shadow = new THREE.Mesh(new THREE.CircleGeometry(3.6, 48), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sh), transparent: true, depthWrite: false }));
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(3.2, 48), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sh), transparent: true, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = -size.y * s / 2 - .02; scene.add(shadow);
 
   const camera = new THREE.PerspectiveCamera(30, 1, .1, 100);
