@@ -261,171 +261,131 @@ const CONFIG = {
    ========================================================= */
 const MENU = [
   { id:"rabais", name:"Menu rabais", note:"Tous les jours de 11 h à 18 h seulement.", items:[
-    ["Trio Burger Suprême", 13.99, "Burger suprême + frites + boisson"],
-    ["Trio Burger Original", 13.99, "Burger original + frites + boisson"]
+    ["Trio Burger Original", 13.99, "Burger original + frites + boisson"],
+    ["Trio Burger Suprême", 13.99, "Burger suprême + frites + boisson"]
   ]},
   { id:"burgers", name:"Burgers", note:"Pain maison, viande halal.", items:[
     ["Burger Original", 13.50],
     ["Burger Suprême", 13.50],
     ["Burger Poulet grillé", 13.50],
-    ["Burger Végé", 13.50],
     ["Burger Truffe", 14.00],
-    ["Burger Poulet frit", 14.00],
-    ["Burger Royal bacon et œuf", 14.00],
     ["Burger Guacamole", 14.00],
-    ["Burger Bœuf braisé", 22.00]
+    ["Burger Royal bacon et œuf", 14.00],
+    ["Burger Poulet frit", 14.00]
   ]},
   { id:"trios", name:"Faire un trio", note:"À ajouter à un burger ou un wrap.", items:[
     ["Trio frites", 5.50, "Frites + boisson"],
     ["Trio salade", 5.50, "Salade + boisson"],
-    ["Trio poutine", 6.50, "Petite poutine + boisson"]
+    ["Trio poutine", 6.50, "Poutine + boisson"]
   ]},
-  { id:"poutines", name:"Poutines", items:[
-    ["Poutine classique — régulière", 11.00],
-    ["Poutine classique — grande", 15.00],
-    ["Poutine poulet grillé — régulière", 14.50],
-    ["Poutine poulet grillé — grande", 22.50],
-    ["Poutine steak haché — régulière", 14.50],
-    ["Poutine steak haché — grande", 22.50],
-    ["Poutine bœuf braisé — régulière", 18.00],
-    ["Poutine bœuf braisé — grande", 24.00]
+  { id:"sandwichs", name:"Sandwichs", items:[
+    ["Sandwich mixte", 16.00],
+    ["Sandwich bœuf", 16.00],
+    ["Sandwich poulet", 16.00]
   ]},
   { id:"wraps", name:"Wraps", items:[
-    ["Wrap Steak haché", 13.00],
-    ["Wrap Poulet grillé", 13.50],
-    ["Wrap Poulet frit et œuf", 13.50],
-    ["Wrap Bœuf braisé", 17.00]
+    ["Wrap poulet frit et œuf", 13.50],
+    ["Wrap steak haché", 13.00],
+    ["Wrap poulet grillé", 13.50]
   ]},
-  { id:"bols", name:"Bols", items:[
-    ["Bol à composer", 13.50, "Choix de base et de garnitures au comptoir"],
-    ["Bol Luka — poulet croustillant", 14.00],
-    ["Bol Adan — poulet grillé", 14.00],
-    ["Bol Noah — bœuf braisé", 22.00]
+  { id:"poutines", name:"Poutines", note:"Sauce maison.", items:[
+    ["Poutine classique — régulière", 11.00],
+    ["Poutine steak haché — régulière", 14.50],
+    ["Poutine poulet grillé — régulière", 14.50],
+    ["Poutine classique — grande", 15.00],
+    ["Poutine poulet grillé — grande", 22.50],
+    ["Poutine steak haché — grande", 22.50],
+    ["Poutine bœuf braisé — grande", 24.00]
   ]},
   { id:"salades", name:"Salades", items:[
-    ["Salade Quinoa & edamame", 10.50],
-    ["Salade Sakura — poulet croustillant", 11.00],
-    ["Salade à composer", 12.50, "Choix de garnitures au comptoir"],
-    ["Salade Betterave & feta", 13.00],
-    ["Salade Poulet croustillant", 13.00],
-    ["Salade Printanière", 13.50],
+    ["Salade Sakura", 11.00, "Poulet croustillant"],
+    ["Salade à composer", 12.50, "Garnitures au choix au comptoir"],
+    ["Salade Betterave et feta", 13.00],
     ["Salade Poulet grillé", 14.00],
-    ["Salade Rainbow orientale", 14.00],
-    ["Salade Burrata", 16.00],
-    ["Salade Bœuf braisé", 20.00]
+    ["Salade Burrata", 16.00]
   ]},
-  { id:"sandwich", name:"Sandwich", items:[
-    ["Sandwich mixte", 16.00]
+  { id:"ailes", name:"Ailes de poulet frit", note:"Nature ou sauce au choix.", items:[
+    ["6 ailes — nature", 10.00],
+    ["12 ailes — nature", 16.00],
+    ["24 ailes — nature", 28.00],
+    ["6 ailes — ail et miel", 10.00],
+    ["12 ailes — ail et miel", 16.00],
+    ["22 ailes — ail et miel", 28.00],
+    ["6 ailes — thaï chili doux", 10.00],
+    ["12 ailes — thaï chili doux", 16.00],
+    ["24 ailes — thaï chili doux", 28.00],
+    ["6 ailes — barbecue", 10.00],
+    ["12 ailes — barbecue", 16.00],
+    ["24 ailes — barbecue", 28.00]
   ]},
-  { id:"ailes", name:"Ailes de poulet frit", items:[
-    ["Ailes BBQ — 6 mcx", 10.00],
-    ["Ailes BBQ — 12 mcx", 16.00],
-    ["Ailes BBQ — 24 mcx", 28.00],
-    ["Ailes Thaï chili doux — 6 mcx", 10.00],
-    ["Ailes Thaï chili doux — 12 mcx", 16.00],
-    ["Ailes Thaï chili doux — 24 mcx", 28.00],
-    ["Ailes Miel & ail — 6 mcx", 10.00],
-    ["Ailes Miel & ail — 12 mcx", 16.00],
-    ["Ailes Miel & ail — 22 mcx", 28.00]
-  ]},
-  { id:"entrees", name:"Entrées & accompagnements", items:[
+  { id:"entrees", name:"Entrées et accompagnements", items:[
     ["Petite frite maison", 4.00],
-    ["Salade de saison", 4.00],
-    ["Hummus", 6.50],
     ["Grande frite maison", 7.00],
-    ["Rouleaux impériaux au poulet (2)", 7.00],
+    ["Hummus", 6.50],
     ["Rouleaux impériaux végé (2)", 7.00],
+    ["Rouleaux impériaux au poulet (2)", 7.00],
+    ["Fleur d'oignon frit", 8.00],
     ["Guacamole", 8.00],
-    ["Sauté de champignons", 8.00],
-    ["Fleur d'oignon frit", 8.00]
+    ["Sauté de champignons", 8.00]
   ]},
-  { id:"extras", name:"Extras", items:[
+  { id:"extras", name:"Extras", note:"À ajouter à un plat.", items:[
     ["Extra fromage", 1.00],
     ["Extra bacon", 2.00],
     ["Extra poulet grillé", 2.00],
-    ["Extra poulet croustillant", 2.00],
-    ["Extra bœuf braisé", 4.00]
+    ["Extra poulet croustillant", 2.00]
   ]},
   { id:"sauces", name:"Sauces", items:[
+    ["Sauce chipotle", 0.99],
     ["Sauce BBQ", 0.99],
-    ["Sauce Chipotle", 0.99],
-    ["Sauce Teriyaki", 0.99],
     ["Sauce mayo épicée", 0.99],
-    ["Sauce ketchup épicé", 0.99]
+    ["Sauce truffe", 2.00]
   ]},
-  { id:"crofres", name:"Crofres", note:"Notre gaufre-croissant, servie chaude.", items:[
-    ["Crofre Original", 4.99],
-    ["Chocolette Bella", 6.99],
-    ["Banane brûlée", 8.99],
-    ["Oréo crémeux", 8.99],
-    ["Lotus spéculoos", 8.99],
-    ["Fraise flamboyante", 8.99],
-    ["Olé la mangue tropicale", 8.99],
-    ["Banane & Fresa", 9.95],
-    ["Bueno Bueno", 9.95],
-    ["Pistache crousti", 9.95]
+  { id:"croffles", name:"Croffles et gaufres", note:"Servis chauds.", items:[
+    ["Croffle Original", 4.99],
+    ["Croffle Chocolette Bella", 6.99],
+    ["Croffle Pistache Crousti", 9.95],
+    ["Gaufre", 7.00]
   ]},
-  { id:"crofres-extra", name:"Extras pour crofres", items:[
+  { id:"croffles-extra", name:"Garnitures pour croffles", items:[
     ["Sucre", 0.50],
-    ["Bananes", 1.00],
     ["Caramel", 1.50],
-    ["Lait condensé", 1.50],
-    ["Sirop d'érable", 1.50],
     ["Sirop chocolat noir", 1.50],
     ["Sirop chocolat blanc", 1.50],
+    ["Sirop d'érable", 1.50],
     ["Sirop citrouille épicée", 1.50],
-    ["Fraise", 1.75],
-    ["Mangue", 1.75],
-    ["Oréo", 1.75],
+    ["Lait condensé", 1.50],
     ["Lotus Biscoff", 1.75],
-    ["Bueno", 1.75],
+    ["Oreo", 1.75],
+    ["Mangue", 1.75],
+    ["Fraise", 1.75],
     ["Nutella", 2.00],
     ["Crème chantilly", 2.00],
     ["Chocolat noisette crémeuse", 2.00]
   ]},
   { id:"desserts", name:"Desserts", items:[
     ["Tiramisu", 6.00],
-    ["Crème brûlée", 6.00],
-    ["Gaufre", 7.00]
+    ["Crème brûlée", 6.00]
   ]},
-  { id:"smoothies", name:"Smoothies & matcha", items:[
-    ["T-Thaï", 6.00],
-    ["Matcha fraise — 12 oz", 6.50],
-    ["Matcha pistache — 12 oz", 6.99],
-    ["Café coco froid", 7.00],
-    ["Piña Ô-lala", 7.00],
-    ["Matcha fraise — 16 oz", 7.50],
-    ["Guava & Fresa", 7.50],
-    ["Nojito fraise et menthe", 7.50],
+  { id:"smoothies", name:"Smoothies et matcha", items:[
     ["Draco-Dragon", 7.95],
-    ["Matcha pistache — 16 oz", 7.99],
-    ["Fresa Rosé", 8.95],
-    ["Mango-Tango", 8.99],
-    ["Baie Baie", 9.95]
-  ]},
-  { id:"cafe", name:"Café & thé", items:[
-    ["Thé", 1.75],
-    ["Café / espresso", 2.50],
-    ["Café filtre", 2.99],
-    ["Latte", 4.50]
+    ["Matcha fraise (16 oz)", 8.50],
+    ["Mango-Tango", 8.99]
   ]},
   { id:"boissons", name:"Boissons", items:[
     ["Eau 500 ml", 2.00],
-    ["Jus de pomme", 2.00],
-    ["Jus d'orange", 2.00],
+    ["Eau gazéifiée Perrier", 2.50],
     ["Canette Coca-Cola", 2.00],
-    ["Canette Coca-Cola Zero", 2.00],
+    ["Canette Coca-Cola Zéro", 2.00],
+    ["Canette Coca-Cola Diète", 2.00],
     ["Canette Pepsi", 2.00],
+    ["Canette 7UP", 2.00],
     ["Canette Sprite", 2.00],
     ["Canette Canada Dry", 2.00],
+    ["Canette Orangina", 3.00],
+    ["Canette Fuze", 2.00],
     ["Canette Ice Tea", 2.00],
-    ["Eau gazéifiée", 2.50],
-    ["Coca-Cola 500 ml", 2.99],
-    ["Coca-Cola Zero 500 ml", 2.99],
-    ["Pepsi 500 ml", 2.99],
-    ["Jus de coco", 3.00],
-    ["Orangina", 3.50],
-    ["Jarritos Mango", 3.50]
+    ["Jus d'orange", 2.00],
+    ["Jus de pomme", 2.00]
   ]}
 ];
 
