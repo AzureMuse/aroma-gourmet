@@ -52,8 +52,20 @@ a{color:inherit}
 .logo{width:min(250px,62vw);height:auto;display:block;filter:drop-shadow(0 2px 14px rgba(226,184,112,.18))}
 .tagline{margin:8px 0 0;text-align:center;font-size:14px;color:var(--muted);letter-spacing:.01em}
 .stage{position:relative;width:min(94vw,600px);aspect-ratio:1/1.02;margin-top:4px;flex:0 0 auto}
-.stage canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:grab}
-.stage canvas:active{cursor:grabbing}
+.stage{perspective:1100px}
+.tilt{position:absolute;left:15%;right:15%;top:17%;bottom:17%;transform-style:preserve-3d;
+  transform:translateY(var(--fy,0)) rotateX(var(--rx,0)) rotateY(var(--ry,0));will-change:transform;
+  animation:land 1.1s cubic-bezier(.2,.9,.25,1.15) both}
+.burgerimg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+  filter:drop-shadow(0 18px 28px rgba(0,0,0,.6)) drop-shadow(0 0 40px rgba(200,32,47,.18)) saturate(1.08) contrast(1.04)}
+.sheen{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;opacity:.55;
+  -webkit-mask:url(assets/burger.webp) center/contain no-repeat;mask:url(assets/burger.webp) center/contain no-repeat;
+  background:radial-gradient(40% 30% at var(--sx,50%) 22%,rgba(255,236,200,.55),transparent 70%)}
+.plate{position:absolute;left:18%;right:18%;bottom:13%;height:9%;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(0,0,0,.75),rgba(0,0,0,.35) 60%,transparent);filter:blur(4px)}
+.tilt.hop{animation:hop .5s ease}
+@keyframes land{from{opacity:0;transform:translateY(-60px) scale(.86)}}
+@keyframes hop{40%{translate:0 -14px}}
 .orbit{position:absolute;inset:0;pointer-events:none}
 .orbit button{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;
   background:rgba(23,19,17,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
@@ -73,8 +85,6 @@ a{color:inherit}
 .chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
   color:var(--ink);padding:8px 13px;border-radius:999px;font-size:13px;font-weight:500;text-decoration:none;min-height:36px}
 .chip:hover{background:rgba(255,255,255,.12)}
-.nogl .stage canvas,.nogl .hint3d{display:none}
-.nogl .stage{background:radial-gradient(closest-side,rgba(226,184,112,.12),transparent)}
 
 /* ---------- Status ---------- */
 .status{margin-top:18px;border-radius:var(--r);padding:12px 14px;font-size:14px;line-height:1.45;border:1px solid}
@@ -188,7 +198,7 @@ footer a{color:var(--gold);text-decoration:none;font-weight:600}
 
 @media (min-width:600px){.items{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.cat h2{font-size:34px}.orbit button{font-size:14.5px;padding:10px 17px}}
 @media (max-width:380px){.orbit button{font-size:12.5px;padding:8px 11px}}
-@media (prefers-reduced-motion:reduce){.orbit button{animation:none}html{scroll-behavior:auto}}
+@media (prefers-reduced-motion:reduce){.orbit button,.tilt{animation:none}html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
@@ -250,15 +260,19 @@ function track(event, key, params){
   <img class="logo" src="assets/logo.webp" alt="Aroma Gourmet Restaurant" width="828" height="464">
   <p class="tagline">Burgers gourmet au pain maison · Montréal<br>Commandez ici, payez au comptoir.</p>
   <div class="stage" id="stage">
-    <canvas id="burger" aria-label="Le double smash d'Aroma Gourmet en 3D. Glissez pour le faire tourner." role="img"></canvas>
+    <div class="plate" aria-hidden="true"></div>
+    <div class="tilt" id="burgerTilt">
+      <img class="burgerimg" src="assets/burger.webp" alt="Le Burger Original d'Aroma Gourmet : pain brioché, steak, cheddar fondu, sauce maison" width="900" height="823" fetchpriority="high">
+      <span class="sheen" aria-hidden="true"></span>
+    </div>
     <nav class="orbit" aria-label="Aller directement à une catégorie">
       <button type="button" data-goto="burgers" style="left:50%;top:6%;--d:0s">Burgers</button>
       <button type="button" data-goto="rabais" style="left:83%;top:19%;--d:-.6s">Trio<small>13,99 $</small></button>
-      <button type="button" data-goto="poutines" style="left:87%;top:49%;--d:-1.2s">Poutines</button>
-      <button type="button" data-goto="ailes" style="left:81%;top:79%;--d:-1.8s">Ailes</button>
+      <button type="button" data-goto="poutines" style="left:88%;top:47%;--d:-1.2s">Poutines</button>
+      <button type="button" data-goto="ailes" style="left:83%;top:81%;--d:-1.8s">Ailes</button>
       <button type="button" data-goto="boissons" style="left:50%;top:93%;--d:-2.4s">Boissons</button>
-      <button type="button" data-goto="desserts" style="left:19%;top:79%;--d:-3s">Desserts</button>
-      <button type="button" data-goto="wraps" style="left:13%;top:49%;--d:-3.6s">Wraps</button>
+      <button type="button" data-goto="desserts" style="left:17%;top:81%;--d:-3s">Desserts</button>
+      <button type="button" data-goto="wraps" style="left:12%;top:47%;--d:-3.6s">Wraps</button>
       <button type="button" data-goto="trios" style="left:17%;top:19%;--d:-4.2s">Trios</button>
     </nav>
   </div>
@@ -898,322 +912,36 @@ renderMenu();
 renderBar();
 setInterval(renderStatus, 60000);
 </script>
-<script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-"three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
-</script>
-<script type="module">
-/* Le double smash d'Aroma Gourmet, modélisé en 3D.
-   Fidèle au vrai : pain brioché brillant sans sésame, laitue iceberg émincée,
-   tomate, 2 steaks fins aux bords croustillants, fromage fondu,
-   oignons grillés, sauce rosée qui coule. */
-import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-
-const canvas = document.getElementById("burger");
-const stage = document.getElementById("stage");
-const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-let renderer;
-try {
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
-} catch (e) { document.body.classList.add("nogl"); throw e; }
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = .95;
-
-const scene = new THREE.Scene();
-const pmrem = new THREE.PMREMGenerator(renderer);
-scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-
-const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
-camera.position.set(0, 7.5, 31);
-
-/* ---------- Lumières : clé chaude, contre-jour rouge, débouchage doré ---------- */
-scene.add(new THREE.HemisphereLight(0xffe7c7, 0x1a0b08, 0.5));
-const key = new THREE.DirectionalLight(0xfff0dc, 2.1); key.position.set(6, 11, 8); scene.add(key);
-const rim = new THREE.DirectionalLight(0xff2b3a, 3.2); rim.position.set(-7, 4, -8); scene.add(rim);
-const rim2 = new THREE.DirectionalLight(0xff6a3a, 1.4); rim2.position.set(8, 2, -6); scene.add(rim2);
-const fill = new THREE.PointLight(0xffc98a, 30, 40); fill.position.set(-8, 3, 7); scene.add(fill);
-
-/* ---------- Textures dessinées au canvas ---------- */
-function tex(size, draw, repeat = 1) {
-  const c = document.createElement("canvas"); c.width = c.height = size;
-  draw(c.getContext("2d"), size);
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeat, repeat);
-  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
-  return t;
-}
-const rnd = (a, b) => a + Math.random() * (b - a);
-function speckle(g, s, n, colors, rmin, rmax, alpha = 1) {
-  for (let i = 0; i < n; i++) {
-    g.globalAlpha = alpha * rnd(.3, 1);
-    g.fillStyle = colors[(Math.random() * colors.length) | 0];
-    g.beginPath(); g.arc(rnd(0, s), rnd(0, s), rnd(rmin, rmax), 0, 7); g.fill();
+<script>
+/* Burger Original en vitrine : il se pose, flotte et s'incline vers le doigt ou la souris. */
+{
+  const stage = document.getElementById("stage");
+  const card = document.getElementById("burgerTilt");
+  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let tx = 0, ty = 0, cx = 0, cy = 0, last = 0, t0 = performance.now();
+  function aim(e){
+    const r = stage.getBoundingClientRect();
+    tx = ((e.clientX - r.left) / r.width - .5) * 2;
+    ty = ((e.clientY - r.top) / r.height - .5) * 2;
+    last = performance.now();
   }
-  g.globalAlpha = 1;
-}
-const crustBump = tex(256, (g, s) => { g.fillStyle = "#777"; g.fillRect(0, 0, s, s); speckle(g, s, 2600, ["#fff", "#000", "#999"], .4, 2.2, .5); }, 3);
-const bunBump = tex(256, (g, s) => { g.fillStyle = "#888"; g.fillRect(0, 0, s, s); speckle(g, s, 900, ["#9a9a9a", "#707070"], 1, 5, .35); }, 2);
-const pattyMap = tex(512, (g, s) => {
-  g.fillStyle = "#6a3d24"; g.fillRect(0, 0, s, s);
-  speckle(g, s, 4200, ["#4a2815", "#5e3520", "#9a613b", "#a8714a", "#3a1f10"], .6, 3.2, .75);
-}, 2);
-const crumbMap = tex(256, (g, s) => {
-  g.fillStyle = "#f0d29b"; g.fillRect(0, 0, s, s);
-  speckle(g, s, 700, ["#dcb879", "#fff1cf", "#e7c587"], 1, 4, .7);
-});
-const tomatoTop = tex(256, (g, s) => {
-  const c = s / 2; g.fillStyle = "#c81e1a"; g.fillRect(0, 0, s, s);
-  for (let i = 0; i < 6; i++) {
-    const a = i / 6 * Math.PI * 2;
-    g.fillStyle = "#f0553f"; g.beginPath();
-    g.ellipse(c + Math.cos(a) * s * .25, c + Math.sin(a) * s * .25, s * .13, s * .08, a, 0, 7); g.fill();
-    g.fillStyle = "#f6d36a";
-    for (let k = 0; k < 4; k++) { g.beginPath(); g.arc(c + Math.cos(a) * s * (.2 + k * .03), c + Math.sin(a) * s * (.2 + k * .03), 3, 0, 7); g.fill(); }
-  }
-  g.fillStyle = "#e23b2c"; g.beginPath(); g.arc(c, c, s * .09, 0, 7); g.fill();
-});
-tomatoTop.wrapS = tomatoTop.wrapT = THREE.ClampToEdgeWrapping; tomatoTop.repeat.set(1, 1);
-
-/* ---------- Matières ---------- */
-const M = {
-  bun: new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: .46, clearcoat: .55, clearcoatRoughness: .38,
-    bumpMap: bunBump, bumpScale: .5, sheen: .25, sheenColor: new THREE.Color(0xffc98a), envMapIntensity: .45 }),
-  crumb: new THREE.MeshStandardMaterial({ map: crumbMap, roughness: .95, bumpMap: crumbMap, bumpScale: 1.4 }),
-  pattySide: new THREE.MeshStandardMaterial({ color: 0x4a2816, roughness: .8, bumpMap: crustBump, bumpScale: 3, envMapIntensity: .4 }),
-  patty: new THREE.MeshPhysicalMaterial({ map: pattyMap, vertexColors: true, roughness: .62, bumpMap: crustBump, bumpScale: 2.4, clearcoat: .25, clearcoatRoughness: .5, envMapIntensity: .6 }),
-  cheese: new THREE.MeshPhysicalMaterial({ color: 0xffb11f, roughness: .3, clearcoat: .8, clearcoatRoughness: .2,
-    sheen: .6, sheenColor: new THREE.Color(0xffd36b), side: THREE.DoubleSide, envMapIntensity: .8 }),
-  sauce: new THREE.MeshPhysicalMaterial({ color: 0xf08b6e, roughness: .18, clearcoat: 1, clearcoatRoughness: .08, envMapIntensity: 1 }),
-  tomatoSide: new THREE.MeshPhysicalMaterial({ color: 0xc41d17, roughness: .25, clearcoat: 1, clearcoatRoughness: .1 }),
-  tomatoTop: new THREE.MeshPhysicalMaterial({ map: tomatoTop, roughness: .2, clearcoat: 1, clearcoatRoughness: .05 }),
-  lettuce: new THREE.MeshStandardMaterial({ roughness: .45, side: THREE.DoubleSide, envMapIntensity: .8 }),
-  onion: new THREE.MeshPhysicalMaterial({ color: 0xc8843a, roughness: .35, transmission: .25, thickness: .4, clearcoat: .6 })
-};
-
-/* ---------- Pains (profils tournés) ---------- */
-function paintByHeight(geo, stops) {
-  const pos = geo.attributes.position, col = new Float32Array(pos.count * 3), c = new THREE.Color();
-  geo.computeBoundingBox(); const { min, max } = geo.boundingBox;
-  for (let i = 0; i < pos.count; i++) {
-    const t = (pos.getY(i) - min.y) / (max.y - min.y || 1);
-    let a = stops[0], b = stops[stops.length - 1];
-    for (let k = 0; k < stops.length - 1; k++) if (t >= stops[k][0] && t <= stops[k + 1][0]) { a = stops[k]; b = stops[k + 1]; }
-    const f = (t - a[0]) / (b[0] - a[0] || 1);
-    c.set(a[1]).lerp(new THREE.Color(b[1]), f);
-    col.set([c.r, c.g, c.b], i * 3);
-  }
-  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-}
-function wobble(geo, amt) {
-  const p = geo.attributes.position, seed = Math.random() * 9;
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), z = p.getZ(i), a = Math.atan2(z, x);
-    const k = 1 + amt * (Math.sin(a * 3 + seed) * .6 + Math.sin(a * 7 + seed * 2) * .4);
-    p.setX(i, x * k); p.setZ(i, z * k);
-  }
-  geo.computeVertexNormals();
-}
-
-function fixSeam(geo, segs, npts) {
-  geo.computeVertexNormals();
-  const n = geo.attributes.normal, v = new THREE.Vector3(), w = new THREE.Vector3();
-  for (let j = 0; j < npts; j++) {
-    const a = j, b = segs * npts + j;
-    v.fromBufferAttribute(n, a); w.fromBufferAttribute(n, b); v.add(w).normalize();
-    n.setXYZ(a, v.x, v.y, v.z); n.setXYZ(b, v.x, v.y, v.z);
+  stage.addEventListener("pointermove", aim);
+  stage.addEventListener("pointerdown", aim);
+  document.querySelectorAll(".orbit button").forEach(b =>
+    b.addEventListener("pointerenter", () => { card.classList.remove("hop"); void card.offsetWidth; card.classList.add("hop"); }));
+  if(!calm){
+    (function loop(now){
+      requestAnimationFrame(loop);
+      const idle = now - last > 1800, t = (now - t0) / 1000;
+      const gx = idle ? Math.sin(t * .6) * .55 : tx, gy = idle ? Math.cos(t * .45) * .25 : ty;
+      cx += (gx - cx) * .07; cy += (gy - cy) * .07;
+      card.style.setProperty("--rx", (-cy * 9).toFixed(2) + "deg");
+      card.style.setProperty("--ry", (cx * 14).toFixed(2) + "deg");
+      card.style.setProperty("--fy", (Math.sin(t * 1.4) * 6).toFixed(2) + "px");
+      card.style.setProperty("--sx", (50 + cx * 18).toFixed(1) + "%");
+    })(t0);
   }
 }
-const R = 5;
-function topBun() {
-  const pts = [], H = 4.1;
-  for (let i = 0; i <= 48; i++) {
-    const t = i / 48, a = t * Math.PI / 2;
-    pts.push(new THREE.Vector2(R * Math.pow(Math.sin(a), .72) + .0001, H * Math.pow(Math.cos(a), .78)));
-  }
-  pts.push(new THREE.Vector2(R * .985, -.18), new THREE.Vector2(R * .9, -.24), new THREE.Vector2(.001, -.24));
-  pts.reverse();
-  const g = new THREE.LatheGeometry(pts, 128);
-  paintByHeight(g, [[0, "#f1cf91"], [.07, "#e0a052"], [.22, "#b9651f"], [.6, "#8e4312"], [1, "#74340c"]]);
-  wobble(g, .016); fixSeam(g, 128, pts.length);
-  return new THREE.Mesh(g, M.bun);
-}
-function bottomBun() {
-  const grp = new THREE.Group(), H = 1.55, pts = [];
-  pts.push(new THREE.Vector2(.001, 0));
-  for (let i = 0; i <= 16; i++) { const a = i / 16 * Math.PI / 2; pts.push(new THREE.Vector2(R - .5 + Math.sin(a) * .5, .5 - Math.cos(a) * .5)); }
-  pts.push(new THREE.Vector2(R, H - .25), new THREE.Vector2(R - .08, H), new THREE.Vector2(.001, H));
-  const g = new THREE.LatheGeometry(pts, 128);
-  paintByHeight(g, [[0, "#7f3d10"], [.5, "#b0601f"], [.82, "#dba35a"], [1, "#f0d29b"]]);
-  wobble(g, .015); fixSeam(g, 128, pts.length);
-  grp.add(new THREE.Mesh(g, M.bun));
-  const crumb = new THREE.Mesh(new THREE.CircleGeometry(R - .1, 96), M.crumb);
-  crumb.rotation.x = -Math.PI / 2; crumb.position.y = H + .005; grp.add(crumb);
-  return grp;
-}
-
-/* ---------- Steak smashé : bord irrégulier et croûte foncée ---------- */
-function patty() {
-  const r = 5.2, h = .95, g = new THREE.CylinderGeometry(r, r * .97, h, 160, 4, false);
-  const p = g.attributes.position, seed = Math.random() * 10, col = new Float32Array(p.count * 3), c = new THREE.Color();
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), z = p.getZ(i), y = p.getY(i), d = Math.hypot(x, z);
-    if (d > .05) {
-      const a = Math.atan2(z, x);
-      const k = 1 + .03 * Math.sin(a * 5 + seed) + .018 * Math.sin(a * 13 + seed * 3) + .01 * Math.sin(a * 31) + rnd(-.006, .006);
-      p.setX(i, x * k); p.setZ(i, z * k);
-    }
-    p.setY(i, y + (Math.abs(y) > h * .45 ? rnd(-.05, .05) : 0) - (d / r) * (d / r) * .12 * Math.sign(y));
-    c.set(d > r * .88 ? "#a8724e" : "#ffffff").lerp(new THREE.Color("#b07a52"), Math.random() * .3);
-    col.set([c.r, c.g, c.b], i * 3);
-  }
-  g.setAttribute("color", new THREE.BufferAttribute(col, 3));
-  g.computeVertexNormals();
-  return new THREE.Mesh(g, [M.pattySide, M.patty, M.patty]);
-}
-
-/* ---------- Fromage fondu qui retombe sur les bords ---------- */
-function cheese() {
-  const g = new THREE.PlaneGeometry(8.7, 8.7, 64, 64); g.rotateX(-Math.PI / 2);
-  const p = g.attributes.position, seed = Math.random() * 6;
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), z = p.getZ(i), d = Math.hypot(x, z);
-    let y = Math.sin(x * .9 + seed) * .03 + Math.cos(z * 1.1) * .03;
-    if (d > 4.9) y -= Math.pow(d - 4.9, 1.2) * .7;
-    p.setY(i, y);
-    if (d > 4.9) { const s = 1 - (d - 4.9) * .14; p.setX(i, x * s); p.setZ(i, z * s); }
-  }
-  g.computeVertexNormals();
-  const m = new THREE.Mesh(g, M.cheese); m.rotation.y = rnd(0, Math.PI / 2);
-  return m;
-}
-
-/* ---------- Sauce rosée + coulures ---------- */
-function sauce(nDrips) {
-  const grp = new THREE.Group();
-  const disc = new THREE.Mesh(new THREE.CylinderGeometry(5.0, 5.0, .14, 96), M.sauce); grp.add(disc);
-  for (let i = 0; i < nDrips; i++) {
-    const a = rnd(0, Math.PI * 2), len = rnd(.45, 1.0), w = rnd(.22, .34);
-    const d = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 16), M.sauce);
-    d.scale.set(w, len, w * .5); d.position.set(Math.cos(a) * 5.05, -len * .95, Math.sin(a) * 5.05);
-    d.rotation.y = -a; grp.add(d);
-  }
-  return grp;
-}
-
-/* ---------- Tomate ---------- */
-function tomato() {
-  const grp = new THREE.Group();
-  for (let i = 0; i < 2; i++) {
-    const g = new THREE.CylinderGeometry(3.6, 3.6, .32, 64);
-    const m = new THREE.Mesh(g, [M.tomatoSide, M.tomatoTop, M.tomatoSide]);
-    m.position.set(i ? 1.7 : -1.6, i * .06, i ? -.9 : .8); m.rotation.y = rnd(0, 6); grp.add(m);
-  }
-  return grp;
-}
-
-/* ---------- Iceberg émincée (instances) ---------- */
-function lettuce() {
-  const n = 320, g = new THREE.BoxGeometry(1.05, .03, .15, 4, 1, 1);
-  const p = g.attributes.position;
-  for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) + Math.sin(p.getX(i) * 2.4) * .08);
-  g.computeVertexNormals();
-  const mesh = new THREE.InstancedMesh(g, M.lettuce, n), o = new THREE.Object3D(), c = new THREE.Color();
-  for (let i = 0; i < n; i++) {
-    const a = rnd(0, Math.PI * 2), d = Math.sqrt(Math.random()) * 5.05;
-    o.position.set(Math.cos(a) * d, rnd(0, .45), Math.sin(a) * d);
-    o.rotation.set(rnd(-.5, .5), rnd(0, 6.3), rnd(-.4, .4)); o.scale.setScalar(rnd(.7, 1.25));
-    o.updateMatrix(); mesh.setMatrixAt(i, o.matrix);
-    mesh.setColorAt(i, c.set(["#cfe39a", "#b5d46f", "#e2efbe", "#9cc35a"][(Math.random() * 4) | 0]));
-  }
-  return mesh;
-}
-
-/* ---------- Oignons grillés ---------- */
-function onions() {
-  const grp = new THREE.Group();
-  for (let i = 0; i < 22; i++) {
-    const m = new THREE.Mesh(new THREE.TorusGeometry(rnd(.45, .8), rnd(.07, .11), 8, 24, rnd(1.6, 3)), M.onion);
-    const a = rnd(0, Math.PI * 2), d = rnd(0, 4.2);
-    m.position.set(Math.cos(a) * d, rnd(0, .12), Math.sin(a) * d);
-    m.rotation.set(Math.PI / 2 + rnd(-.3, .3), 0, rnd(0, 6.3)); grp.add(m);
-  }
-  return grp;
-}
-
-/* ---------- Montage, du bas vers le haut ---------- */
-const burger = new THREE.Group(); scene.add(burger);
-const stack = [];
-let y = 0;
-function put(obj, h, gap = 0) { obj.userData.y = y + gap; obj.position.y = y + gap; burger.add(obj); stack.push(obj); y += h; }
-put(bottomBun(), 1.55, 0);
-put(sauce(0), .1, .05);
-put(lettuce(), .5, 0);
-put(tomato(), .38, .16);
-put(patty(), .95, .48);
-put(cheese(), .03, .01);
-put(patty(), .95, .48);
-put(cheese(), .03, .01);
-put(onions(), .22, .08);
-put(sauce(7), .1, .05);
-put(topBun(), 3.5, .22);
-const H = y;
-burger.position.y = -H / 2 + .4;
-
-// Ombre douce sous le burger
-const shadow = new THREE.Mesh(new THREE.CircleGeometry(7.5, 64), new THREE.MeshBasicMaterial({
-  transparent: true, depthWrite: false, map: tex(128, (g, s) => {
-    const r = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-    r.addColorStop(0, "rgba(0,0,0,.75)"); r.addColorStop(.55, "rgba(0,0,0,.35)"); r.addColorStop(1, "rgba(0,0,0,0)");
-    g.fillStyle = r; g.fillRect(0, 0, s, s);
-  })
-}));
-shadow.rotation.x = -Math.PI / 2; shadow.position.y = burger.position.y - .02; scene.add(shadow);
-
-/* ---------- Contrôles : on tourne au doigt, la page défile toujours ---------- */
-const target = new THREE.Vector3(0, .2, 0);
-camera.lookAt(target);
-const controls = new OrbitControls(camera, canvas);
-controls.target.copy(target);
-controls.enableZoom = false; controls.enablePan = false; controls.enableDamping = true;
-controls.minPolarAngle = Math.PI * .22; controls.maxPolarAngle = Math.PI * .5;
-controls.autoRotate = !calm; controls.autoRotateSpeed = 1.6;
-canvas.style.touchAction = "pan-y";
-
-function resize() {
-  const w = stage.clientWidth, h = stage.clientHeight;
-  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
-}
-new ResizeObserver(resize).observe(stage); resize();
-
-/* ---------- Animation : le burger se monte couche par couche ---------- */
-const t0 = performance.now();
-const easeOut = t => 1 - Math.pow(1 - t, 3) + Math.sin(t * Math.PI) * .06;
-stack.forEach(o => { if (!calm) o.position.y = o.userData.y + 14; });
-let visible = true, hop = 0;
-new IntersectionObserver(([e]) => { visible = e.isIntersecting; }, { threshold: 0 }).observe(stage);
-document.querySelectorAll(".orbit button").forEach(b => b.addEventListener("pointerenter", () => { hop = performance.now(); }));
-
-function frame(now) {
-  requestAnimationFrame(frame);
-  if (!visible) return;
-  const t = (now - t0) / 1000;
-  if (!calm) {
-    stack.forEach((o, i) => {
-      const k = Math.min(1, Math.max(0, (t - .15 - i * .11) / .55));
-      o.position.y = o.userData.y + (1 - easeOut(k)) * 14;
-    });
-    const hk = Math.min(1, (now - hop) / 450);
-    burger.position.y = -H / 2 + .4 + Math.sin(t * 1.3) * .12 + (hop ? Math.sin(hk * Math.PI) * .6 : 0);
-  }
-  controls.update();
-  renderer.render(scene, camera);
-}
-requestAnimationFrame(frame);
 </script>
 </body>
 </html>
