@@ -6,7 +6,7 @@
 <title>Commander — Aroma Gourmet</title>
 <meta name="description" content="Commandez en ligne chez Aroma Gourmet, 1651 rue Ontario Est, Montréal. Burgers au pain maison. Sur place ou à emporter, paiement au comptoir.">
 <meta property="og:title" content="Commander — Aroma Gourmet">
-<meta property="og:description" content="Burgers au pain maison. Sur place ou à emporter. Paiement au comptoir.">
+<meta property="og:description" content="Burgers au pain maison. Sur place, à emporter ou en livraison par Uber Eats. Paiement au comptoir.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
@@ -134,6 +134,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 textarea{min-height:76px;resize:vertical;line-height:1.45}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold)}
 .err{color:var(--red);font-size:13px;font-weight:600;margin-top:6px}
+.uber{margin-top:14px;padding:15px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.uber p{margin:0 0 12px;font-size:13.5px;line-height:1.5}
+.uber .hint{margin:11px 0 0}
+.uber a.cta{display:block;text-align:center;text-decoration:none}
 
 /* ---------- Confirmation ---------- */
 .done{text-align:center;padding-block:14px 8px}
@@ -193,6 +197,8 @@ const CONFIG = {
   telDisplay: "438 531-6482",
   address: "1651 rue Ontario Est, Montréal",
   maps: "https://www.google.com/maps/search/?api=1&query=1651+rue+Ontario+Est+Montr%C3%A9al",
+  // Le restaurant ne livre pas lui-même : la livraison passe par Uber Eats.
+  uberEats: "https://www.ubereats.com/ca-fr/store/aroma-gourmet/RjftZDDYXX-YyPR5PmC5Vw",
   // Canal de notification du restaurant (ntfy.sh — gratuit, sans compte).
   ntfy: ["aroma-gourmet-cmd-9k4m2x7p", "azuremuse-aroma-copie-5t8n3w6q"]
 };
@@ -615,17 +621,23 @@ function renderSheet(){
     b.innerHTML =
       '<form id="orderForm" novalidate>' +
         '<fieldset>' +
-          '<legend>Sur place ou à emporter&nbsp;?</legend>' +
-          '<p class="hint">Aucune livraison. Vous mangez au restaurant, ou vous venez chercher votre commande au comptoir.</p>' +
+          '<legend>Comment voulez-vous votre commande&nbsp;?</legend>' +
           '<div class="radios">' +
             '<label class="radio"><input type="radio" name="mode" value="Sur place" required>' +
               '<span><b>Sur place</b><small>Votre table vous attend, la commande est lancée pour votre arrivée.</small></span></label>' +
             '<label class="radio"><input type="radio" name="mode" value="À emporter" required>' +
               '<span><b>À emporter</b><small>Vous passez la chercher au comptoir du 1651 rue Ontario Est.</small></span></label>' +
+            '<label class="radio"><input type="radio" name="mode" value="Livraison" required>' +
+              '<span><b>Livraison</b><small>Le restaurant ne livre pas lui-même&nbsp;: la livraison se commande sur Uber&nbsp;Eats.</small></span></label>' +
           '</div>' +
-          '<div class="err" id="errMode" hidden>Choisissez sur place ou à emporter.</div>' +
+          '<div class="err" id="errMode" hidden>Choisissez sur place, à emporter ou livraison.</div>' +
+          '<div id="uberPanel" class="uber" hidden>' +
+            '<p>Pour être livré, votre commande se fait directement sur Uber&nbsp;Eats, qui s\'occupe du livreur et du paiement. Le menu et les prix y sont ceux du restaurant.</p>' +
+            '<a class="cta wide" href="' + esc(CONFIG.uberEats) + '" target="_blank" rel="noopener noreferrer">Commander la livraison sur Uber&nbsp;Eats</a>' +
+            '<p class="hint">Pour manger sur place ou venir chercher au comptoir, revenez sur l\'un des deux autres choix&nbsp;: c\'est plus rapide et sans frais de livraison.</p>' +
+          '</div>' +
         '</fieldset>' +
-        '<fieldset>' +
+        '<fieldset id="fsHeure">' +
           '<legend>À quelle heure&nbsp;?</legend>' +
           '<p class="hint">Comptez environ ' + CONFIG.leadMin + ' minutes de préparation.</p>' +
           '<label class="fld"><span>Heure d\'arrivée</span>' +
@@ -637,7 +649,7 @@ function renderSheet(){
           '</label>' +
           '<div class="err" id="errHeure" hidden>Choisissez une heure.</div>' +
         '</fieldset>' +
-        '<fieldset>' +
+        '<fieldset id="fsCoord">' +
           '<legend>Vos coordonnées</legend>' +
           '<p class="hint">Le nom que vous donnerez au comptoir, et un numéro où le restaurant peut vous joindre si besoin.</p>' +
           '<label class="fld"><span>Prénom et nom</span>' +
@@ -649,7 +661,7 @@ function renderSheet(){
           '<label class="fld"><span>Note pour la cuisine <span style="font-weight:400;color:var(--muted)">(optionnel)</span></span>' +
             '<textarea name="note" placeholder="Allergies, sans oignon, sauce à part…"></textarea></label>' +
         '</fieldset>' +
-        '<div class="totals" style="margin-bottom:18px">' +
+        '<div class="totals" id="fsTotaux" style="margin-bottom:18px">' +
           '<div class="trow"><span>' + count() + (count() === 1 ? ' article' : ' articles') + '</span><span></span></div>' +
           '<div class="trow big"><span>Sous-total</span><span>' + money(subtotal()) + '</span></div>' +
           '<p class="taxnote">Taxes et paiement au comptoir.</p>' +
@@ -771,11 +783,28 @@ document.addEventListener("click", async e => {
   if(e.target.id === "sheet") return closeSheet();
 });
 
+// Le choix « Livraison » ne se commande pas ici : il renvoie vers Uber Eats.
+// On masque alors l'heure, les coordonnées et le bouton d'envoi.
+document.addEventListener("change", e => {
+  if(e.target.name !== "mode") return;
+  const livraison = e.target.value === "Livraison";
+  const show = el => { if(el) el.hidden = livraison; };
+  const panel = $("#uberPanel");
+  if(panel) panel.hidden = !livraison;
+  show($("#fsHeure"));
+  show($("#fsCoord"));
+  show($("#fsTotaux"));
+  show($("#submitBtn"));
+  $("#errMode").hidden = true;
+});
+
 document.addEventListener("submit", async e => {
   if(e.target.id !== "orderForm") return;
   e.preventDefault();
   const f = e.target;
   const mode = f.querySelector('input[name=mode]:checked');
+  // Livraison : rien à envoyer au restaurant, tout se passe chez Uber Eats.
+  if(mode && mode.value === "Livraison") return;
   const heure = f.heure.value;
   const nom = f.nom.value.trim();
   // Téléphone obligatoire : 10 chiffres (ou 11 commençant par 1).
