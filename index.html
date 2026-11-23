@@ -207,8 +207,9 @@ const CONFIG = {
   maps: "https://www.google.com/maps/search/?api=1&query=1651+rue+Ontario+Est+Montr%C3%A9al",
   // Le restaurant ne livre pas lui-même : la livraison passe par Uber Eats.
   uberEats: "https://www.ubereats.com/ca-fr/store/aroma-gourmet/RjftZDDYXX-YyPR5PmC5Vw",
-  // Canal de notification du restaurant (ntfy.sh — gratuit, sans compte).
-  ntfy: ["aroma-gourmet-cmd-9k4m2x7p", "azuremuse-aroma-copie-5t8n3w6q"],
+  // Relais Cloudflare qui transmet les commandes au restaurant.
+  // Les canaux de notification ne sont plus dans la page : ils sont dans le relais.
+  relay: "https://aroma-commandes.RELAIS.workers.dev",
 
   // Google Ads. Coller ici l'étiquette (label) de chaque action de conversion
   // créée dans Google Ads : la conversion est alors comptée automatiquement.
@@ -721,17 +722,15 @@ function ascii(s){
 }
 
 async function sendOrder(o){
-  const body = orderText(o);
-  const title = ascii("Commande " + o.num + " - " + o.mode.toUpperCase() + " - " + o.heure);
-  const results = await Promise.allSettled(
-    CONFIG.ntfy.map(topic => fetch("https://ntfy.sh/" + topic, {
-      method: "POST",
-      headers: { "Title": title, "Priority": "urgent", "Tags": "hamburger" },
-      body: body
-    }).then(r => { if(!r.ok) throw new Error("HTTP " + r.status); return r; }))
-  );
-  const ok = results.some(r => r.status === "fulfilled");
-  if(!ok) throw new Error(results.map(r => r.reason && r.reason.message).join(" / "));
+  const r = await fetch(CONFIG.relay, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: ascii("Commande " + o.num + " - " + o.mode.toUpperCase() + " - " + o.heure),
+      body: orderText(o)
+    })
+  });
+  if(!r.ok) throw new Error("HTTP " + r.status);
   return true;
 }
 
