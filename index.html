@@ -265,7 +265,7 @@ function track(event, key, params){
   <div class="stage" id="stage">
     <div class="plate" aria-hidden="true"></div>
     <div class="tilt" id="burgerTilt">
-      <img class="burgerimg" src="assets/burger.webp" alt="Le Burger Original d'Aroma Gourmet : pain brioché, steak, cheddar fondu, sauce maison" width="900" height="823" fetchpriority="high">
+      <img class="burgerimg" src="assets/burger.webp" data-depth="assets/burger-depth.png" alt="Le Burger Original d'Aroma Gourmet : pain brioché, steak, cheddar fondu, sauce maison" width="900" height="823" fetchpriority="high">
       <span class="sheen" aria-hidden="true"></span>
     </div>
     <nav class="orbit" aria-label="Aller directement à une catégorie">
@@ -947,64 +947,53 @@ setInterval(renderStatus, 60000);
 }
 </script>
 <script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-"three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
 </script>
 <script type="module">
-/* Le Burger Original d'Aroma en vrai 3D (modèle fait à partir de la photo).
-   La photo s'affiche tout de suite ; le modèle prend le relais dès qu'il est chargé. */
+/* Le vrai Burger Original en 3D : la photo garde 100 % de sa qualité,
+   une carte de profondeur lui donne du relief. On le fait tourner au doigt. */
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-
-const MODEL = "https://d2ol7oe51mr4n9.cloudfront.net/user_3GY57KXgH8mMCpCyjAXNy5YQnvC/360c6a30-7b4e-4464-ad64-78ce0c00c610.glb";
 const stage = document.getElementById("stage");
+const img = stage.querySelector(".burgerimg");
 const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const load = src => new Promise((ok, ko) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => ok(i); i.onerror = ko; i.src = src; });
 
 try {
-  const gltf = await new GLTFLoader().loadAsync(MODEL);
+  const [photo, depthImg] = await Promise.all([load(img.currentSrc || img.src), load(img.dataset.depth)]);
   const canvas = document.createElement("canvas");
-  canvas.className = "burger3d"; canvas.setAttribute("aria-hidden", "true");
+  canvas.className = "burger3d";
+  canvas.setAttribute("aria-hidden", "true");
   stage.insertBefore(canvas, stage.querySelector(".orbit"));
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = .92;
+  renderer.toneMapping = THREE.NoToneMapping;
+
+  // Relief lu dans la carte de profondeur
+  const dc = document.createElement("canvas"); dc.width = depthImg.width; dc.height = depthImg.height;
+  const g2 = dc.getContext("2d"); g2.drawImage(depthImg, 0, 0);
+  const dpx = g2.getImageData(0, 0, dc.width, dc.height).data;
+  const W = 10, H = W * photo.height / photo.width, SX = 280, SY = Math.round(SX * H / W);
+  const geo = new THREE.PlaneGeometry(W, H, SX, SY);
+  const pos = geo.attributes.position, uv = geo.attributes.uv, DEPTH = 4.2;
+  for (let i = 0; i < pos.count; i++) {
+    const u = uv.getX(i), v = 1 - uv.getY(i);
+    const x = Math.min(dc.width - 1, Math.round(u * (dc.width - 1))), y = Math.min(dc.height - 1, Math.round(v * (dc.height - 1)));
+    pos.setZ(i, dpx[(y * dc.width + x) * 4] / 255 * DEPTH - DEPTH / 2);
+  }
+  geo.computeVertexNormals();
+
+  const tex = new THREE.Texture(photo);
+  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.needsUpdate = true;
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: .45, alphaToCoverage: true, side: THREE.DoubleSide });
 
   const scene = new THREE.Scene();
-  scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), .04).texture;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x2a1a14, .7));
-  const key = new THREE.DirectionalLight(0xffffff, 1.5); key.position.set(4, 7, 6); scene.add(key);
-  const rim = new THREE.DirectionalLight(0xff4050, .7); rim.position.set(-5, 3, -6); scene.add(rim);
-  const rim2 = new THREE.DirectionalLight(0xffd2a0, .8); rim2.position.set(6, 2, -4); scene.add(rim2);
-
-  // Centrer et mettre à l'échelle le burger
-  const model = gltf.scene;
-  model.traverse(o => { if (o.isMesh) { o.material.envMapIntensity = 1; } });
-  const box = new THREE.Box3().setFromObject(model);
-  const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
-  const s = 5.2 / Math.max(size.x, size.y, size.z);
-  model.position.copy(center).multiplyScalar(-s); model.scale.setScalar(s);
-  const burger = new THREE.Group(); burger.add(model); scene.add(burger);
-
-  // Ombre douce
-  const sh = document.createElement("canvas"); sh.width = sh.height = 128;
-  const g = sh.getContext("2d"), rg = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  rg.addColorStop(0, "rgba(0,0,0,.7)"); rg.addColorStop(.6, "rgba(0,0,0,.25)"); rg.addColorStop(1, "rgba(0,0,0,0)");
-  g.fillStyle = rg; g.fillRect(0, 0, 128, 128);
-  const shadow = new THREE.Mesh(new THREE.CircleGeometry(3.2, 48), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sh), transparent: true, depthWrite: false }));
-  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -size.y * s / 2 - .02; scene.add(shadow);
-
+  const burger = new THREE.Group(); scene.add(burger);
+  burger.add(new THREE.Mesh(geo, mat));
   const camera = new THREE.PerspectiveCamera(30, 1, .1, 100);
-  camera.position.set(0, 2.2, 15);
-  const controls = new OrbitControls(camera, canvas);
-  controls.enableZoom = false; controls.enablePan = false; controls.enableDamping = true;
-  controls.minPolarAngle = Math.PI * .3; controls.maxPolarAngle = Math.PI * .55;
-  controls.autoRotate = !calm; controls.autoRotateSpeed = 2.2;
-  canvas.style.touchAction = "pan-y";
+  camera.position.set(0, 0, 27);
 
   function resize() {
     const w = stage.clientWidth, h = stage.clientHeight;
@@ -1012,21 +1001,36 @@ try {
   }
   new ResizeObserver(resize).observe(stage); resize();
 
-  let visible = true, hop = -1e9;
-  new IntersectionObserver(([e]) => { visible = e.isIntersecting; }).observe(stage);
+  // Le doigt fait tourner le burger ; sans contact il se balance tout seul
+  let drag = null, target = 0, tilt = 0, cur = 0, curX = 0, last = -1e9, hop = -1e9;
+  canvas.addEventListener("pointerdown", e => { drag = { x: e.clientX, y: e.clientY, t: target }; last = performance.now(); });
+  addEventListener("pointermove", e => {
+    if (drag) { target = Math.max(-.75, Math.min(.75, drag.t + (e.clientX - drag.x) / 260)); last = performance.now(); }
+    else if (e.pointerType === "mouse") {
+      const r = stage.getBoundingClientRect();
+      if (e.clientY > r.top && e.clientY < r.bottom) { target = ((e.clientX - r.left) / r.width - .5) * 1.1; tilt = ((e.clientY - r.top) / r.height - .5) * .3; last = performance.now(); }
+    }
+  });
+  addEventListener("pointerup", () => { drag = null; });
+  addEventListener("pointercancel", () => { drag = null; });
   document.querySelectorAll(".orbit button").forEach(b => b.addEventListener("pointerenter", () => { hop = performance.now(); }));
+
+  let visible = true;
+  new IntersectionObserver(([e]) => { visible = e.isIntersecting; }).observe(stage);
   stage.classList.add("is3d");
   const t0 = performance.now();
   (function frame(now) {
     requestAnimationFrame(frame);
     if (!visible) return;
-    const t = (now - t0) / 1000;
+    const t = (now - t0) / 1000, idle = now - last > 2200 && !drag;
+    const gy = calm ? 0 : idle ? Math.sin(t * .5) * .55 : target;
+    const gx = calm ? 0 : idle ? Math.sin(t * .37) * .08 : tilt;
+    cur += (gy - cur) * .06; curX += (gx - curX) * .06;
+    burger.rotation.set(curX, cur, 0);
     const land = calm ? 1 : Math.min(1, t / 1.1), e = 1 - Math.pow(1 - land, 3);
     const hk = Math.min(1, (now - hop) / 450);
-    burger.position.y = (1 - e) * 3 + (calm ? 0 : Math.sin(t * 1.4) * .08) + Math.sin(hk * Math.PI) * .4;
-    burger.scale.setScalar(.85 + .15 * e);
-    canvas.style.opacity = Math.min(1, t / .5);
-    controls.update();
+    burger.position.y = (1 - e) * 4 + (calm ? 0 : Math.sin(t * 1.4) * .12) + Math.sin(hk * Math.PI) * .5;
+    burger.scale.setScalar(.86 + .14 * e);
     renderer.render(scene, camera);
   })(t0);
 } catch (err) { /* La photo inclinable reste affichée */ }
