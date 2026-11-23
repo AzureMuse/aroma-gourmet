@@ -17,163 +17,178 @@ gtag('config', 'AW-18565631152');
 <meta property="og:description" content="Burgers au pain maison. Sur place, à emporter ou en livraison par Uber Eats. Paiement au comptoir.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap">
 <style>
+/* VOICE  : gourmet, sobre, nocturne — un comptoir de burger haut de gamme.
+   IDEA   : le menu posé sur l'ardoise noire du comptoir, le burger en vitrine.
+   PICTURE: le double smash d'Aroma en 3D qui tourne, les catégories en orbite.
+   COLOUR : noir brun #0d0b0a, rouge braise #c8202f, or du logo #e2b870.
+   TYPE   : Cormorant Garamond pour les titres (gravé comme le logo) + Inter. */
 :root{
-  --bg:#faf7f2; --surface:#ffffff; --surface-2:#f4efe7;
-  --ink:#1c1714; --muted:#6d625a; --line:#e4dbd0;
-  --gold:#9a6c1f; --gold-soft:#f5ead6; --red:#b03326;
-  --green:#2f6b4f; --green-soft:#e8f2ec;
-  --display:"Space Grotesk",ui-sans-serif,system-ui,sans-serif;
+  --bg:#0d0b0a; --surface:#171311; --surface-2:#211b18; --line:#2c2420;
+  --ink:#f4ede6; --muted:#a89d93; --gold:#e2b870; --red:#c8202f; --red-2:#a51a27;
+  --ok:#7fc29b;
+  --display:"Cormorant Garamond",Georgia,serif;
   --body:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
-  --r:14px; --shadow:0 1px 2px rgba(28,23,20,.06),0 8px 24px rgba(28,23,20,.07);
-  color-scheme:light;
+  --r:14px; color-scheme:dark;
 }
-*{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{
-  margin:0; background:var(--bg); color:var(--ink);
-  font-family:var(--body); font-size:16px; line-height:1.5;
-  padding-bottom:calc(96px + env(safe-area-inset-bottom,0px));
-  -webkit-font-smoothing:antialiased;
-}
+*{box-sizing:border-box;min-width:0}
+html{-webkit-text-size-adjust:100%;scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-bottom:calc(96px + env(safe-area-inset-bottom,0px));-webkit-font-smoothing:antialiased;overflow-x:clip}
 img{max-width:100%}
 [hidden]{display:none!important}
 button{font:inherit;color:inherit;cursor:pointer}
-.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 
-/* ---------- Header ---------- */
-.top{background:var(--ink);color:#fff;padding-block:22px 20px;padding-top:calc(22px + env(safe-area-inset-top,0px))}
-.brand{font-family:var(--display);font-weight:700;font-size:clamp(26px,7vw,34px);letter-spacing:-.02em;margin:0;line-height:1.05}
-.brand span{color:var(--gold-soft)}
-.tagline{margin:8px 0 0;font-size:14px;color:#cfc5ba;line-height:1.45}
-.topmeta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-.chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#f3ece4;padding:6px 11px;border-radius:999px;font-size:12.5px;font-weight:500;text-decoration:none}
-.chip:hover{background:rgba(255,255,255,.16)}
+/* ---------- Hero ---------- */
+.hero{position:relative;min-height:min(100svh,900px);justify-content:center;display:flex;flex-direction:column;align-items:center;
+  padding:calc(18px + env(safe-area-inset-top,0px)) 16px 22px;overflow:hidden;isolation:isolate;
+  background:radial-gradient(60% 45% at 50% 52%,rgba(200,32,47,.34),rgba(200,32,47,.08) 55%,transparent 75%),
+             radial-gradient(120% 70% at 50% 110%,#1a0d0c,transparent 60%),var(--bg)}
+.hero::after{content:"";position:absolute;inset:auto 0 0;height:90px;background:linear-gradient(transparent,var(--bg));z-index:-1}
+.logo{width:min(250px,62vw);height:auto;display:block;filter:drop-shadow(0 2px 14px rgba(226,184,112,.18))}
+.tagline{margin:8px 0 0;text-align:center;font-size:14px;color:var(--muted);letter-spacing:.01em}
+.stage{position:relative;width:min(94vw,600px);aspect-ratio:1/1.02;margin-top:4px;flex:0 0 auto}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:grab}
+.stage canvas:active{cursor:grabbing}
+.orbit{position:absolute;inset:0;pointer-events:none}
+.orbit button{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;
+  background:rgba(23,19,17,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid rgba(226,184,112,.35);color:var(--ink);border-radius:999px;
+  padding:9px 14px;font-size:13.5px;font-weight:600;white-space:nowrap;min-height:40px;
+  box-shadow:0 6px 20px rgba(0,0,0,.45);transition:background .2s,border-color .2s,transform .2s;
+  animation:float 5s ease-in-out infinite;animation-delay:var(--d)}
+.orbit button:hover,.orbit button:focus-visible{background:var(--red);border-color:var(--red);transform:translate(-50%,-50%) scale(1.06)}
+.orbit button.hot{border-color:var(--red);background:rgba(200,32,47,.9)}
+.orbit button small{display:block;font-size:11px;font-weight:500;opacity:.85;margin-top:-1px}
+@keyframes float{50%{margin-top:-6px}}
+.hint3d{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);font-size:12px;color:var(--muted);white-space:nowrap;pointer-events:none;opacity:.8}
+.herocta{margin-top:6px;display:inline-flex;align-items:center;gap:10px;background:var(--red);color:#fff;text-decoration:none;
+  font-weight:700;font-size:16px;padding:15px 26px;border-radius:999px;box-shadow:0 10px 30px rgba(200,32,47,.35)}
+.herocta:hover{background:var(--red-2)}
+.topmeta{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:16px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  color:var(--ink);padding:8px 13px;border-radius:999px;font-size:13px;font-weight:500;text-decoration:none;min-height:36px}
+.chip:hover{background:rgba(255,255,255,.12)}
+.nogl .stage canvas,.nogl .hint3d{display:none}
+.nogl .stage{background:radial-gradient(closest-side,rgba(226,184,112,.12),transparent)}
 
-/* ---------- Status banner ---------- */
-.status{margin-top:14px;border-radius:var(--r);padding:12px 14px;font-size:13.5px;line-height:1.45;border:1px solid}
-.status.open{background:var(--green-soft);border-color:#c7e0d3;color:#1e4d38}
-.status.closed{background:#fdeceb;border-color:#f3c9c5;color:#7d241b}
-.status.soon{background:var(--gold-soft);border-color:#e9d9bb;color:#54391a;font-size:14px}
-.status.soon a{color:#54391a;font-weight:700}
-.callbtn{display:block;margin-top:10px;background:var(--ink);color:#fff;text-align:center;
-  text-decoration:none;font-weight:700;font-size:15.5px;padding:15px;border-radius:12px}
-.callbtn:hover{opacity:.88}
+/* ---------- Status ---------- */
+.status{margin-top:18px;border-radius:var(--r);padding:12px 14px;font-size:14px;line-height:1.45;border:1px solid}
+.status.open{background:rgba(127,194,155,.08);border-color:rgba(127,194,155,.3);color:#cfe9d9}
+.status.closed{background:rgba(200,32,47,.1);border-color:rgba(200,32,47,.4);color:#f3c9cc}
+.status.soon{background:rgba(226,184,112,.08);border-color:rgba(226,184,112,.3);color:#f1dfbd}
+.status.soon a{color:var(--gold);font-weight:700}
+.callbtn{display:block;margin-top:10px;background:var(--red);color:#fff;text-align:center;text-decoration:none;font-weight:700;font-size:15.5px;padding:15px;border-radius:12px}
+.demo{margin-top:12px;font-size:13px;color:var(--gold);text-align:center}
 
-/* ---------- Category nav ---------- */
-.navbar{position:sticky;top:0;z-index:30;background:rgba(250,247,242,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-.navscroll{display:flex;gap:7px;overflow-x:auto;padding-block:11px;scrollbar-width:none;-ms-overflow-style:none}
+/* ---------- Barre des catégories ---------- */
+.navbar{position:sticky;top:0;z-index:30;background:rgba(13,11,10,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.navscroll{display:flex;gap:8px;overflow-x:auto;padding-block:11px;scrollbar-width:none}
 .navscroll::-webkit-scrollbar{display:none}
-.navscroll button{flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:13.5px;font-weight:500;white-space:nowrap;color:var(--muted)}
-.navscroll button[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.navscroll button{flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:8px 15px;font-size:14px;font-weight:500;white-space:nowrap;color:var(--muted);min-height:38px}
+.navscroll button[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:#120f0e}
 
 /* ---------- Menu ---------- */
-main{padding-block:8px 20px}
-.cat{margin-top:30px;scroll-margin-top:68px}
-.cat h2{font-family:var(--display);font-weight:700;font-size:21px;letter-spacing:-.01em;margin:0 0 3px;text-wrap:balance}
-.cat .note{margin:0 0 13px;font-size:13px;color:var(--muted)}
-.items{display:grid;gap:9px}
-.item{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:13px 13px 13px 15px;display:flex;align-items:center;gap:12px}
-.item.has{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
-.item-main{flex:1;min-width:0}
-.item-name{font-weight:600;font-size:15px;line-height:1.3}
-.item-desc{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.4}
-.item-price{font-variant-numeric:tabular-nums;font-weight:600;font-size:14.5px;color:var(--gold);margin-top:5px}
-.item-act{flex:0 0 auto;display:flex;align-items:center;gap:2px}
-.add{width:38px;height:38px;border-radius:11px;border:1px solid var(--ink);background:var(--ink);color:#fff;font-size:21px;line-height:1;display:grid;place-items:center;padding:0}
-.add:hover{opacity:.86}
-.stepper{display:flex;align-items:center;gap:1px;background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:3px}
-.stepper button{width:32px;height:32px;border:0;background:transparent;border-radius:8px;font-size:19px;line-height:1;display:grid;place-items:center;padding:0;color:var(--ink)}
-.stepper button:hover{background:#e8e0d5}
+main{padding-block:6px 20px}
+.cat{margin-top:34px;scroll-margin-top:66px}
+.cat h2{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.05;margin:0 0 4px;text-wrap:balance}
+.cat .note{margin:0 0 14px;font-size:13.5px;color:var(--muted)}
+.items{display:grid;gap:10px}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 14px 14px 16px;display:flex;align-items:center;gap:12px;transition:border-color .2s}
+.item:hover{border-color:#3d322c}
+.item.has{border-color:var(--red);box-shadow:0 0 0 1px var(--red)}
+.item-main{flex:1}
+.item-name{font-weight:600;font-size:15.5px;line-height:1.3}
+.item-desc{font-size:13px;color:var(--muted);margin-top:3px;line-height:1.4}
+.item-price{font-variant-numeric:tabular-nums;font-weight:600;font-size:15px;color:var(--gold);margin-top:6px;white-space:nowrap}
+.item-act{flex:0 0 auto;display:flex;align-items:center}
+.add{width:44px;height:44px;border-radius:999px;border:0;background:var(--red);color:#fff;font-size:23px;line-height:1;display:grid;place-items:center;padding:0;box-shadow:0 4px 14px rgba(200,32,47,.3)}
+.add:hover{background:var(--red-2)}
+.stepper{display:flex;align-items:center;gap:1px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px}
+.stepper button{width:36px;height:36px;border:0;background:transparent;border-radius:999px;font-size:20px;line-height:1;display:grid;place-items:center;padding:0;color:var(--ink)}
+.stepper button:hover{background:#2f2723}
 .qty{min-width:24px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums;font-size:15px}
-.flag{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--red);background:#fdeceb;border-radius:5px;padding:2px 5px;vertical-align:1px}
+.flag{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:700;color:#fff;background:var(--red);border-radius:5px;padding:2px 6px;vertical-align:1px}
 
-/* ---------- Sticky cart bar ---------- */
-.bar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -6px 24px rgba(28,23,20,.09);padding-bottom:env(safe-area-inset-bottom,0px)}
+/* ---------- Panier ---------- */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(23,19,17,.96);backdrop-filter:blur(12px);border-top:1px solid var(--line);box-shadow:0 -8px 30px rgba(0,0,0,.5);padding-bottom:env(safe-area-inset-bottom,0px)}
 .bar-in{display:flex;align-items:center;gap:12px;padding-block:13px}
-.bar-sum{flex:1;min-width:0}
-.bar-count{font-size:12.5px;color:var(--muted)}
-.bar-total{font-family:var(--display);font-weight:700;font-size:20px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-.cta{flex:0 0 auto;background:var(--red);color:#fff;border:0;border-radius:12px;padding:14px 22px;font-weight:700;font-size:15.5px}
-.cta:hover{background:#9a2c20}
-.cta:disabled{background:#d6cec5;color:#8d8278;cursor:not-allowed}
+.bar-sum{flex:1}
+.bar-count{font-size:13px;color:var(--muted)}
+.bar-total{font-weight:700;font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cta{flex:0 0 auto;background:var(--red);color:#fff;border:0;border-radius:999px;padding:14px 24px;font-weight:700;font-size:15.5px;min-height:48px}
+.cta:hover{background:var(--red-2)}
+.cta:disabled{background:#3a302b;color:#8d8278;cursor:not-allowed}
 .cta.wide{width:100%;padding:16px}
 
-/* ---------- Sheet ---------- */
 .sheet{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center}
-.sheet::before{content:"";position:absolute;inset:0;background:rgba(28,23,20,.5)}
-.panel{position:relative;background:var(--bg);width:100%;max-width:720px;max-height:92vh;overflow-y:auto;border-radius:20px 20px 0 0;box-shadow:var(--shadow);padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+.sheet::before{content:"";position:absolute;inset:0;background:rgba(0,0,0,.65)}
+.panel{position:relative;background:var(--bg);width:100%;max-width:760px;max-height:92vh;overflow-y:auto;border-radius:22px 22px 0 0;border:1px solid var(--line);border-bottom:0;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
 .panel-head{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);padding-block:15px;display:flex;align-items:center;gap:12px;z-index:2}
-.panel-head h2{font-family:var(--display);font-weight:700;font-size:18px;margin:0;flex:1;letter-spacing:-.01em}
-.xbtn{width:34px;height:34px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:17px;line-height:1;display:grid;place-items:center;padding:0;flex:0 0 auto}
+.panel-head h2{font-family:var(--display);font-weight:700;font-size:26px;margin:0;flex:1;line-height:1.05}
+.xbtn{width:40px;height:40px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:17px;line-height:1;display:grid;place-items:center;padding:0;flex:0 0 auto}
 .panel-body{padding-block:4px 20px}
-
 .line{display:flex;align-items:center;gap:12px;padding-block:11px;border-bottom:1px solid var(--line)}
 .line:last-of-type{border-bottom:0}
-.line-main{flex:1;min-width:0}
-.line-name{font-weight:600;font-size:14.5px;line-height:1.3}
-.line-each{font-size:12px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
-.line-amt{font-weight:600;font-variant-numeric:tabular-nums;font-size:14.5px;min-width:68px;text-align:right}
-
+.line-main{flex:1}
+.line-name{font-weight:600;font-size:15px;line-height:1.3}
+.line-each{font-size:13px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.line-amt{font-weight:600;font-variant-numeric:tabular-nums;font-size:15px;min-width:72px;text-align:right;white-space:nowrap}
 .totals{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
 .trow{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding-block:4px}
-.trow.big{font-family:var(--display);font-weight:700;font-size:19px;border-top:1px solid var(--line);margin-top:8px;padding-top:11px;letter-spacing:-.01em}
-.trow span:last-child{font-variant-numeric:tabular-nums}
-.taxnote{font-size:12.5px;color:var(--muted);margin-top:9px;line-height:1.45}
-
+.trow.big{font-weight:700;font-size:19px;border-top:1px solid var(--line);margin-top:8px;padding-top:11px}
+.trow span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
+.taxnote{font-size:13px;color:var(--muted);margin-top:9px;line-height:1.45}
 fieldset{border:0;margin:0 0 20px;padding:0}
-legend{font-family:var(--display);font-weight:700;font-size:15.5px;margin-bottom:4px;padding:0}
-.hint{font-size:13px;color:var(--muted);margin:0 0 11px;line-height:1.45}
+legend{font-family:var(--display);font-weight:700;font-size:22px;margin-bottom:4px;padding:0}
+.hint{font-size:13.5px;color:var(--muted);margin:0 0 11px;line-height:1.45}
 .radios{display:grid;gap:9px}
 .radio{display:flex;align-items:flex-start;gap:11px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
-.radio:has(input:checked){border-color:var(--ink);box-shadow:0 0 0 1px var(--ink);background:#fffdf9}
-.radio input{margin:2px 0 0;width:19px;height:19px;accent-color:var(--ink);flex:0 0 auto}
+.radio:has(input:checked){border-color:var(--red);box-shadow:0 0 0 1px var(--red)}
+.radio input{margin:2px 0 0;width:20px;height:20px;accent-color:var(--red);flex:0 0 auto}
 .radio b{display:block;font-size:15px;font-weight:600}
-.radio small{display:block;font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.4}
-
+.radio small{display:block;font-size:13px;color:var(--muted);margin-top:3px;line-height:1.4}
 label.fld{display:block;margin-bottom:14px}
 label.fld > span{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
-input[type=text],input[type=tel],select,textarea{
-  width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--surface);
-  border:1px solid var(--line);border-radius:11px;padding:13px 13px;appearance:none;
-}
-select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236d625a' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
+input[type=text],input[type=tel],select,textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line);border-radius:12px;padding:13px;appearance:none}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23a89d93' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
 textarea{min-height:76px;resize:vertical;line-height:1.45}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold)}
-.err{color:var(--red);font-size:13px;font-weight:600;margin-top:6px}
+.err{color:#ff8a93;font-size:13px;font-weight:600;margin-top:6px}
 .uber{margin-top:14px;padding:15px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
-.uber p{margin:0 0 12px;font-size:13.5px;line-height:1.5}
+.uber p{margin:0 0 12px;font-size:14px;line-height:1.5}
 .uber .hint{margin:11px 0 0}
 .uber a.cta{display:block;text-align:center;text-decoration:none}
-
-/* ---------- Confirmation ---------- */
 .done{text-align:center;padding-block:14px 8px}
-.tick{width:58px;height:58px;border-radius:999px;background:var(--green-soft);color:var(--green);display:grid;place-items:center;margin:0 auto 16px;font-size:30px;border:1px solid #c7e0d3}
-.done h2{font-family:var(--display);font-weight:700;font-size:23px;margin:0 0 8px;letter-spacing:-.01em;text-wrap:balance}
-.done p{margin:0 0 18px;color:var(--muted);font-size:14.5px;line-height:1.5}
-.ticket{background:var(--ink);color:#fff;border-radius:var(--r);padding:20px;text-align:left}
-.ticket .lbl{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:#a89d92;font-weight:600}
-.ticket .num{font-family:var(--display);font-weight:700;font-size:32px;letter-spacing:.01em;margin-top:3px}
+.tick{width:60px;height:60px;border-radius:999px;background:rgba(127,194,155,.12);color:var(--ok);display:grid;place-items:center;margin:0 auto 16px;font-size:30px;border:1px solid rgba(127,194,155,.35)}
+.done h2{font-family:var(--display);font-weight:700;font-size:32px;line-height:1.05;margin:0 0 8px;text-wrap:balance}
+.done p{margin:0 0 18px;color:var(--muted);font-size:15px;line-height:1.5}
+.ticket{background:var(--surface);border:1px solid rgba(226,184,112,.3);border-radius:var(--r);padding:20px;text-align:left}
+.ticket .lbl{font-size:12px;color:var(--muted);font-weight:600}
+.ticket .num{font-weight:700;font-size:32px;letter-spacing:.02em;margin-top:3px;color:var(--gold);font-variant-numeric:tabular-nums}
 .ticket dl{display:grid;grid-template-columns:auto 1fr;gap:7px 16px;margin:17px 0 0;font-size:14px}
-.ticket dt{color:#a89d92}
+.ticket dt{color:var(--muted)}
 .ticket dd{margin:0;font-weight:600;text-align:right}
-.after{margin-top:16px;background:var(--gold-soft);border:1px solid #e9d9bb;border-radius:var(--r);padding:14px;font-size:13.5px;line-height:1.5;color:#54391a}
+.after{margin-top:16px;background:rgba(226,184,112,.07);border:1px solid rgba(226,184,112,.25);border-radius:var(--r);padding:14px;font-size:14px;line-height:1.5;color:#f1dfbd}
 .linkrow{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px}
-.linkrow a{flex:1 1 auto;text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:13px;font-weight:600;font-size:14px;text-decoration:none;color:var(--ink)}
+.linkrow a{flex:1 1 auto;text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px;font-weight:600;font-size:14px;text-decoration:none}
 .copyline{margin-top:14px;font-size:13px;color:var(--muted);line-height:1.5}
 .copyline b{color:var(--ink)}
 
-/* ---------- Footer ---------- */
-footer{border-top:1px solid var(--line);margin-top:34px;padding-block:22px 30px;font-size:13px;color:var(--muted);line-height:1.6}
+footer{border-top:1px solid var(--line);margin-top:40px;padding-block:24px 30px;font-size:13.5px;color:var(--muted);line-height:1.6}
 footer b{color:var(--ink)}
 footer a{color:var(--gold);text-decoration:none;font-weight:600}
-.halal{margin-top:12px;font-size:12.5px;color:var(--muted)}
+.flogo{width:150px;height:auto;display:block;margin-bottom:12px;opacity:.9}
+.halal{margin-top:12px;font-size:13px;color:var(--muted)}
 
-@media (min-width:600px){
-  .items{grid-template-columns:1fr 1fr}
-  .cat h2{font-size:23px}
-}
+@media (min-width:600px){.items{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.cat h2{font-size:34px}.orbit button{font-size:14.5px;padding:10px 17px}}
+@media (max-width:380px){.orbit button{font-size:12.5px;padding:8px 11px}}
+@media (prefers-reduced-motion:reduce){.orbit button{animation:none}html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
@@ -210,6 +225,8 @@ const CONFIG = {
   // Relais Cloudflare qui transmet les commandes au restaurant.
   // Les canaux de notification ne sont plus dans la page : ils sont dans le relais.
   relay: "https://aroma-commandes.RELAIS.workers.dev",
+  // true uniquement pour la copie de démonstration : rien n'est envoyé.
+  testMode: false,
 
   // Google Ads. Coller ici l'étiquette (label) de chaque action de conversion
   // créée dans Google Ads : la conversion est alors comptée automatiquement.
@@ -229,18 +246,30 @@ function track(event, key, params){
 }
 </script>
 
-<header class="top">
-  <div class="wrap">
-    <h1 class="brand">Aroma <span>Gourmet</span></h1>
-    <p class="tagline">Burgers au pain maison · Montréal<br>Commandez ici, payez au comptoir.</p>
-    <div class="topmeta">
-      <a class="chip" href="#" id="mapsLink">📍 1651 rue Ontario Est</a>
-      <a class="chip" href="#" id="telLink">📞 438 531-6482</a>
-    </div>
+<header class="hero" id="top">
+  <img class="logo" src="assets/logo.webp" alt="Aroma Gourmet Restaurant" width="828" height="464">
+  <p class="tagline">Burgers gourmet au pain maison · Montréal<br>Commandez ici, payez au comptoir.</p>
+  <div class="stage" id="stage">
+    <canvas id="burger" aria-label="Le double smash d'Aroma Gourmet en 3D. Glissez pour le faire tourner." role="img"></canvas>
+    <nav class="orbit" aria-label="Aller directement à une catégorie">
+      <button type="button" data-goto="burgers" style="left:50%;top:6%;--d:0s">Burgers</button>
+      <button type="button" data-goto="rabais" style="left:83%;top:19%;--d:-.6s">Trio<small>13,99 $</small></button>
+      <button type="button" data-goto="poutines" style="left:87%;top:49%;--d:-1.2s">Poutines</button>
+      <button type="button" data-goto="ailes" style="left:81%;top:79%;--d:-1.8s">Ailes</button>
+      <button type="button" data-goto="boissons" style="left:50%;top:93%;--d:-2.4s">Boissons</button>
+      <button type="button" data-goto="desserts" style="left:19%;top:79%;--d:-3s">Desserts</button>
+      <button type="button" data-goto="wraps" style="left:13%;top:49%;--d:-3.6s">Wraps</button>
+      <button type="button" data-goto="trios" style="left:17%;top:19%;--d:-4.2s">Trios</button>
+    </nav>
+  </div>
+  <a class="herocta" href="#menuStart">Voir tout le menu ↓</a>
+  <div class="topmeta">
+    <a class="chip" href="#" id="mapsLink">📍 1651 rue Ontario Est</a>
+    <a class="chip" href="#" id="telLink">📞 438 531-6482</a>
   </div>
 </header>
 
-<div class="wrap"><div id="statusBox"></div></div>
+<div class="wrap" id="menuStart"><div id="statusBox"></div></div>
 
 <nav class="navbar" aria-label="Catégories du menu">
   <div class="wrap"><div class="navscroll" id="catNav"></div></div>
@@ -249,6 +278,7 @@ function track(event, key, params){
 <main class="wrap" id="menuRoot"></main>
 
 <footer class="wrap">
+  <img class="flogo" src="assets/logo.webp" alt="" width="828" height="464" loading="lazy">
   <b>Aroma Gourmet</b><br>
   1651 rue Ontario Est, Montréal · <a href="#" id="telLink2">438 531-6482</a><br>
   Commande en ligne pour consommation sur place ou à emporter, sans frais et sans commission.
@@ -722,6 +752,7 @@ function ascii(s){
 }
 
 async function sendOrder(o){
+  if(CONFIG.testMode){ await new Promise(r => setTimeout(r, 700)); return true; }
   const r = await fetch(CONFIG.relay, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -866,6 +897,323 @@ renderStatus();
 renderMenu();
 renderBar();
 setInterval(renderStatus, 60000);
+</script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+"three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+/* Le double smash d'Aroma Gourmet, modélisé en 3D.
+   Fidèle au vrai : pain brioché brillant sans sésame, laitue iceberg émincée,
+   tomate, 2 steaks fins aux bords croustillants, fromage fondu,
+   oignons grillés, sauce rosée qui coule. */
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const canvas = document.getElementById("burger");
+const stage = document.getElementById("stage");
+const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+} catch (e) { document.body.classList.add("nogl"); throw e; }
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = .95;
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
+camera.position.set(0, 7.5, 31);
+
+/* ---------- Lumières : clé chaude, contre-jour rouge, débouchage doré ---------- */
+scene.add(new THREE.HemisphereLight(0xffe7c7, 0x1a0b08, 0.5));
+const key = new THREE.DirectionalLight(0xfff0dc, 2.1); key.position.set(6, 11, 8); scene.add(key);
+const rim = new THREE.DirectionalLight(0xff2b3a, 3.2); rim.position.set(-7, 4, -8); scene.add(rim);
+const rim2 = new THREE.DirectionalLight(0xff6a3a, 1.4); rim2.position.set(8, 2, -6); scene.add(rim2);
+const fill = new THREE.PointLight(0xffc98a, 30, 40); fill.position.set(-8, 3, 7); scene.add(fill);
+
+/* ---------- Textures dessinées au canvas ---------- */
+function tex(size, draw, repeat = 1) {
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  draw(c.getContext("2d"), size);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeat, repeat);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return t;
+}
+const rnd = (a, b) => a + Math.random() * (b - a);
+function speckle(g, s, n, colors, rmin, rmax, alpha = 1) {
+  for (let i = 0; i < n; i++) {
+    g.globalAlpha = alpha * rnd(.3, 1);
+    g.fillStyle = colors[(Math.random() * colors.length) | 0];
+    g.beginPath(); g.arc(rnd(0, s), rnd(0, s), rnd(rmin, rmax), 0, 7); g.fill();
+  }
+  g.globalAlpha = 1;
+}
+const crustBump = tex(256, (g, s) => { g.fillStyle = "#777"; g.fillRect(0, 0, s, s); speckle(g, s, 2600, ["#fff", "#000", "#999"], .4, 2.2, .5); }, 3);
+const bunBump = tex(256, (g, s) => { g.fillStyle = "#888"; g.fillRect(0, 0, s, s); speckle(g, s, 900, ["#9a9a9a", "#707070"], 1, 5, .35); }, 2);
+const pattyMap = tex(512, (g, s) => {
+  g.fillStyle = "#6a3d24"; g.fillRect(0, 0, s, s);
+  speckle(g, s, 4200, ["#4a2815", "#5e3520", "#9a613b", "#a8714a", "#3a1f10"], .6, 3.2, .75);
+}, 2);
+const crumbMap = tex(256, (g, s) => {
+  g.fillStyle = "#f0d29b"; g.fillRect(0, 0, s, s);
+  speckle(g, s, 700, ["#dcb879", "#fff1cf", "#e7c587"], 1, 4, .7);
+});
+const tomatoTop = tex(256, (g, s) => {
+  const c = s / 2; g.fillStyle = "#c81e1a"; g.fillRect(0, 0, s, s);
+  for (let i = 0; i < 6; i++) {
+    const a = i / 6 * Math.PI * 2;
+    g.fillStyle = "#f0553f"; g.beginPath();
+    g.ellipse(c + Math.cos(a) * s * .25, c + Math.sin(a) * s * .25, s * .13, s * .08, a, 0, 7); g.fill();
+    g.fillStyle = "#f6d36a";
+    for (let k = 0; k < 4; k++) { g.beginPath(); g.arc(c + Math.cos(a) * s * (.2 + k * .03), c + Math.sin(a) * s * (.2 + k * .03), 3, 0, 7); g.fill(); }
+  }
+  g.fillStyle = "#e23b2c"; g.beginPath(); g.arc(c, c, s * .09, 0, 7); g.fill();
+});
+tomatoTop.wrapS = tomatoTop.wrapT = THREE.ClampToEdgeWrapping; tomatoTop.repeat.set(1, 1);
+
+/* ---------- Matières ---------- */
+const M = {
+  bun: new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: .46, clearcoat: .55, clearcoatRoughness: .38,
+    bumpMap: bunBump, bumpScale: .5, sheen: .25, sheenColor: new THREE.Color(0xffc98a), envMapIntensity: .45 }),
+  crumb: new THREE.MeshStandardMaterial({ map: crumbMap, roughness: .95, bumpMap: crumbMap, bumpScale: 1.4 }),
+  pattySide: new THREE.MeshStandardMaterial({ color: 0x4a2816, roughness: .8, bumpMap: crustBump, bumpScale: 3, envMapIntensity: .4 }),
+  patty: new THREE.MeshPhysicalMaterial({ map: pattyMap, vertexColors: true, roughness: .62, bumpMap: crustBump, bumpScale: 2.4, clearcoat: .25, clearcoatRoughness: .5, envMapIntensity: .6 }),
+  cheese: new THREE.MeshPhysicalMaterial({ color: 0xffb11f, roughness: .3, clearcoat: .8, clearcoatRoughness: .2,
+    sheen: .6, sheenColor: new THREE.Color(0xffd36b), side: THREE.DoubleSide, envMapIntensity: .8 }),
+  sauce: new THREE.MeshPhysicalMaterial({ color: 0xf08b6e, roughness: .18, clearcoat: 1, clearcoatRoughness: .08, envMapIntensity: 1 }),
+  tomatoSide: new THREE.MeshPhysicalMaterial({ color: 0xc41d17, roughness: .25, clearcoat: 1, clearcoatRoughness: .1 }),
+  tomatoTop: new THREE.MeshPhysicalMaterial({ map: tomatoTop, roughness: .2, clearcoat: 1, clearcoatRoughness: .05 }),
+  lettuce: new THREE.MeshStandardMaterial({ roughness: .45, side: THREE.DoubleSide, envMapIntensity: .8 }),
+  onion: new THREE.MeshPhysicalMaterial({ color: 0xc8843a, roughness: .35, transmission: .25, thickness: .4, clearcoat: .6 })
+};
+
+/* ---------- Pains (profils tournés) ---------- */
+function paintByHeight(geo, stops) {
+  const pos = geo.attributes.position, col = new Float32Array(pos.count * 3), c = new THREE.Color();
+  geo.computeBoundingBox(); const { min, max } = geo.boundingBox;
+  for (let i = 0; i < pos.count; i++) {
+    const t = (pos.getY(i) - min.y) / (max.y - min.y || 1);
+    let a = stops[0], b = stops[stops.length - 1];
+    for (let k = 0; k < stops.length - 1; k++) if (t >= stops[k][0] && t <= stops[k + 1][0]) { a = stops[k]; b = stops[k + 1]; }
+    const f = (t - a[0]) / (b[0] - a[0] || 1);
+    c.set(a[1]).lerp(new THREE.Color(b[1]), f);
+    col.set([c.r, c.g, c.b], i * 3);
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+}
+function wobble(geo, amt) {
+  const p = geo.attributes.position, seed = Math.random() * 9;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i), a = Math.atan2(z, x);
+    const k = 1 + amt * (Math.sin(a * 3 + seed) * .6 + Math.sin(a * 7 + seed * 2) * .4);
+    p.setX(i, x * k); p.setZ(i, z * k);
+  }
+  geo.computeVertexNormals();
+}
+
+function fixSeam(geo, segs, npts) {
+  geo.computeVertexNormals();
+  const n = geo.attributes.normal, v = new THREE.Vector3(), w = new THREE.Vector3();
+  for (let j = 0; j < npts; j++) {
+    const a = j, b = segs * npts + j;
+    v.fromBufferAttribute(n, a); w.fromBufferAttribute(n, b); v.add(w).normalize();
+    n.setXYZ(a, v.x, v.y, v.z); n.setXYZ(b, v.x, v.y, v.z);
+  }
+}
+const R = 5;
+function topBun() {
+  const pts = [], H = 4.1;
+  for (let i = 0; i <= 48; i++) {
+    const t = i / 48, a = t * Math.PI / 2;
+    pts.push(new THREE.Vector2(R * Math.pow(Math.sin(a), .72) + .0001, H * Math.pow(Math.cos(a), .78)));
+  }
+  pts.push(new THREE.Vector2(R * .985, -.18), new THREE.Vector2(R * .9, -.24), new THREE.Vector2(.001, -.24));
+  pts.reverse();
+  const g = new THREE.LatheGeometry(pts, 128);
+  paintByHeight(g, [[0, "#f1cf91"], [.07, "#e0a052"], [.22, "#b9651f"], [.6, "#8e4312"], [1, "#74340c"]]);
+  wobble(g, .016); fixSeam(g, 128, pts.length);
+  return new THREE.Mesh(g, M.bun);
+}
+function bottomBun() {
+  const grp = new THREE.Group(), H = 1.55, pts = [];
+  pts.push(new THREE.Vector2(.001, 0));
+  for (let i = 0; i <= 16; i++) { const a = i / 16 * Math.PI / 2; pts.push(new THREE.Vector2(R - .5 + Math.sin(a) * .5, .5 - Math.cos(a) * .5)); }
+  pts.push(new THREE.Vector2(R, H - .25), new THREE.Vector2(R - .08, H), new THREE.Vector2(.001, H));
+  const g = new THREE.LatheGeometry(pts, 128);
+  paintByHeight(g, [[0, "#7f3d10"], [.5, "#b0601f"], [.82, "#dba35a"], [1, "#f0d29b"]]);
+  wobble(g, .015); fixSeam(g, 128, pts.length);
+  grp.add(new THREE.Mesh(g, M.bun));
+  const crumb = new THREE.Mesh(new THREE.CircleGeometry(R - .1, 96), M.crumb);
+  crumb.rotation.x = -Math.PI / 2; crumb.position.y = H + .005; grp.add(crumb);
+  return grp;
+}
+
+/* ---------- Steak smashé : bord irrégulier et croûte foncée ---------- */
+function patty() {
+  const r = 5.2, h = .95, g = new THREE.CylinderGeometry(r, r * .97, h, 160, 4, false);
+  const p = g.attributes.position, seed = Math.random() * 10, col = new Float32Array(p.count * 3), c = new THREE.Color();
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i), y = p.getY(i), d = Math.hypot(x, z);
+    if (d > .05) {
+      const a = Math.atan2(z, x);
+      const k = 1 + .03 * Math.sin(a * 5 + seed) + .018 * Math.sin(a * 13 + seed * 3) + .01 * Math.sin(a * 31) + rnd(-.006, .006);
+      p.setX(i, x * k); p.setZ(i, z * k);
+    }
+    p.setY(i, y + (Math.abs(y) > h * .45 ? rnd(-.05, .05) : 0) - (d / r) * (d / r) * .12 * Math.sign(y));
+    c.set(d > r * .88 ? "#a8724e" : "#ffffff").lerp(new THREE.Color("#b07a52"), Math.random() * .3);
+    col.set([c.r, c.g, c.b], i * 3);
+  }
+  g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  return new THREE.Mesh(g, [M.pattySide, M.patty, M.patty]);
+}
+
+/* ---------- Fromage fondu qui retombe sur les bords ---------- */
+function cheese() {
+  const g = new THREE.PlaneGeometry(8.7, 8.7, 64, 64); g.rotateX(-Math.PI / 2);
+  const p = g.attributes.position, seed = Math.random() * 6;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i), d = Math.hypot(x, z);
+    let y = Math.sin(x * .9 + seed) * .03 + Math.cos(z * 1.1) * .03;
+    if (d > 4.9) y -= Math.pow(d - 4.9, 1.2) * .7;
+    p.setY(i, y);
+    if (d > 4.9) { const s = 1 - (d - 4.9) * .14; p.setX(i, x * s); p.setZ(i, z * s); }
+  }
+  g.computeVertexNormals();
+  const m = new THREE.Mesh(g, M.cheese); m.rotation.y = rnd(0, Math.PI / 2);
+  return m;
+}
+
+/* ---------- Sauce rosée + coulures ---------- */
+function sauce(nDrips) {
+  const grp = new THREE.Group();
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(5.0, 5.0, .14, 96), M.sauce); grp.add(disc);
+  for (let i = 0; i < nDrips; i++) {
+    const a = rnd(0, Math.PI * 2), len = rnd(.45, 1.0), w = rnd(.22, .34);
+    const d = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 16), M.sauce);
+    d.scale.set(w, len, w * .5); d.position.set(Math.cos(a) * 5.05, -len * .95, Math.sin(a) * 5.05);
+    d.rotation.y = -a; grp.add(d);
+  }
+  return grp;
+}
+
+/* ---------- Tomate ---------- */
+function tomato() {
+  const grp = new THREE.Group();
+  for (let i = 0; i < 2; i++) {
+    const g = new THREE.CylinderGeometry(3.6, 3.6, .32, 64);
+    const m = new THREE.Mesh(g, [M.tomatoSide, M.tomatoTop, M.tomatoSide]);
+    m.position.set(i ? 1.7 : -1.6, i * .06, i ? -.9 : .8); m.rotation.y = rnd(0, 6); grp.add(m);
+  }
+  return grp;
+}
+
+/* ---------- Iceberg émincée (instances) ---------- */
+function lettuce() {
+  const n = 320, g = new THREE.BoxGeometry(1.05, .03, .15, 4, 1, 1);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) + Math.sin(p.getX(i) * 2.4) * .08);
+  g.computeVertexNormals();
+  const mesh = new THREE.InstancedMesh(g, M.lettuce, n), o = new THREE.Object3D(), c = new THREE.Color();
+  for (let i = 0; i < n; i++) {
+    const a = rnd(0, Math.PI * 2), d = Math.sqrt(Math.random()) * 5.05;
+    o.position.set(Math.cos(a) * d, rnd(0, .45), Math.sin(a) * d);
+    o.rotation.set(rnd(-.5, .5), rnd(0, 6.3), rnd(-.4, .4)); o.scale.setScalar(rnd(.7, 1.25));
+    o.updateMatrix(); mesh.setMatrixAt(i, o.matrix);
+    mesh.setColorAt(i, c.set(["#cfe39a", "#b5d46f", "#e2efbe", "#9cc35a"][(Math.random() * 4) | 0]));
+  }
+  return mesh;
+}
+
+/* ---------- Oignons grillés ---------- */
+function onions() {
+  const grp = new THREE.Group();
+  for (let i = 0; i < 22; i++) {
+    const m = new THREE.Mesh(new THREE.TorusGeometry(rnd(.45, .8), rnd(.07, .11), 8, 24, rnd(1.6, 3)), M.onion);
+    const a = rnd(0, Math.PI * 2), d = rnd(0, 4.2);
+    m.position.set(Math.cos(a) * d, rnd(0, .12), Math.sin(a) * d);
+    m.rotation.set(Math.PI / 2 + rnd(-.3, .3), 0, rnd(0, 6.3)); grp.add(m);
+  }
+  return grp;
+}
+
+/* ---------- Montage, du bas vers le haut ---------- */
+const burger = new THREE.Group(); scene.add(burger);
+const stack = [];
+let y = 0;
+function put(obj, h, gap = 0) { obj.userData.y = y + gap; obj.position.y = y + gap; burger.add(obj); stack.push(obj); y += h; }
+put(bottomBun(), 1.55, 0);
+put(sauce(0), .1, .05);
+put(lettuce(), .5, 0);
+put(tomato(), .38, .16);
+put(patty(), .95, .48);
+put(cheese(), .03, .01);
+put(patty(), .95, .48);
+put(cheese(), .03, .01);
+put(onions(), .22, .08);
+put(sauce(7), .1, .05);
+put(topBun(), 3.5, .22);
+const H = y;
+burger.position.y = -H / 2 + .4;
+
+// Ombre douce sous le burger
+const shadow = new THREE.Mesh(new THREE.CircleGeometry(7.5, 64), new THREE.MeshBasicMaterial({
+  transparent: true, depthWrite: false, map: tex(128, (g, s) => {
+    const r = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    r.addColorStop(0, "rgba(0,0,0,.75)"); r.addColorStop(.55, "rgba(0,0,0,.35)"); r.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = r; g.fillRect(0, 0, s, s);
+  })
+}));
+shadow.rotation.x = -Math.PI / 2; shadow.position.y = burger.position.y - .02; scene.add(shadow);
+
+/* ---------- Contrôles : on tourne au doigt, la page défile toujours ---------- */
+const target = new THREE.Vector3(0, .2, 0);
+camera.lookAt(target);
+const controls = new OrbitControls(camera, canvas);
+controls.target.copy(target);
+controls.enableZoom = false; controls.enablePan = false; controls.enableDamping = true;
+controls.minPolarAngle = Math.PI * .22; controls.maxPolarAngle = Math.PI * .5;
+controls.autoRotate = !calm; controls.autoRotateSpeed = 1.6;
+canvas.style.touchAction = "pan-y";
+
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage); resize();
+
+/* ---------- Animation : le burger se monte couche par couche ---------- */
+const t0 = performance.now();
+const easeOut = t => 1 - Math.pow(1 - t, 3) + Math.sin(t * Math.PI) * .06;
+stack.forEach(o => { if (!calm) o.position.y = o.userData.y + 14; });
+let visible = true, hop = 0;
+new IntersectionObserver(([e]) => { visible = e.isIntersecting; }, { threshold: 0 }).observe(stage);
+document.querySelectorAll(".orbit button").forEach(b => b.addEventListener("pointerenter", () => { hop = performance.now(); }));
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (!visible) return;
+  const t = (now - t0) / 1000;
+  if (!calm) {
+    stack.forEach((o, i) => {
+      const k = Math.min(1, Math.max(0, (t - .15 - i * .11) / .55));
+      o.position.y = o.userData.y + (1 - easeOut(k)) * 14;
+    });
+    const hk = Math.min(1, (now - hop) / 450);
+    burger.position.y = -H / 2 + .4 + Math.sin(t * 1.3) * .12 + (hop ? Math.sin(hk * Math.PI) * .6 : 0);
+  }
+  controls.update();
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(frame);
 </script>
 </body>
 </html>
