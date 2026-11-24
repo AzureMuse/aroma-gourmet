@@ -530,7 +530,7 @@ var R = {
 };
 
 // src/index.js
-import ADMIN_HTML from "./5eee908ae4c9a40d93be33dfec112ddf341dd55d-admin.html";
+import ADMIN_HTML from "./12b0c83ae4ea8227dd9376037971131ee6ed448a-admin.html";
 
 // src/webpush.js
 var enc = new TextEncoder();
@@ -606,7 +606,10 @@ self.addEventListener("push", e => {
     requireInteraction: true, icon: "/icon-192.png", badge: "/icon-192.png",
     vibrate: [400, 150, 400, 150, 400, 150, 400], data: { url: d.url || "/admin" } });
   const badge = (typeof d.pending === "number" && self.navigator.setAppBadge) ? self.navigator.setAppBadge(d.pending).catch(() => {}) : null;
-  e.waitUntil(Promise.all([shown, badge]));
+  // Accus\xE9 de r\xE9ception : prouve au serveur que cet appareil re\xE7oit vraiment les notifications.
+  const ack = self.registration.pushManager.getSubscription().then(s => s && fetch("/api/admin/push-ack", {
+    method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint: s.endpoint }) })).catch(() => {});
+  e.waitUntil(Promise.all([shown, badge, ack]));
 });
 self.addEventListener("notificationclick", e => {
   e.notification.close();
@@ -842,7 +845,7 @@ async function pushTo(env, role, data) {
 __name(pushTo, "pushTo");
 var pendingCount = /* @__PURE__ */ __name(async (env) => (await env.DB.prepare("SELECT COUNT(*) n FROM orders WHERE status='recue'").first()).n, "pendingCount");
 async function restoReachable(env) {
-  const subs = (await env.DB.prepare("SELECT COUNT(*) n FROM push_subs WHERE role='resto' AND fails<3").first()).n;
+  const subs = (await env.DB.prepare("SELECT COUNT(*) n FROM push_subs WHERE role='resto' AND fails=0 AND last_ack>?").bind(Date.now() - 26 * 36e5).first()).n;
   const seen = +(await getSetting(env, "seen_resto") || 0);
   return subs > 0 || Date.now() - seen < 3 * MIN;
 }
@@ -1211,7 +1214,8 @@ async function adminRoutes(env, ctx, req, url) {
       paused: await getSetting(env, "paused") === "1",
       now,
       reachable: await restoReachable(env),
-      devices: Object.fromEntries((await env.DB.prepare("SELECT role, COUNT(*) n FROM push_subs WHERE fails<3 GROUP BY role").all()).results.map((r) => [r.role, r.n])),
+      devices: Object.fromEntries((await env.DB.prepare("SELECT role, COUNT(*) n FROM push_subs WHERE fails=0 AND last_ack>? GROUP BY role").bind(Date.now() - 26 * 36e5).all()).results.map((r) => [r.role, r.n])),
+      subscribed: Object.fromEntries((await env.DB.prepare("SELECT role, COUNT(*) n FROM push_subs GROUP BY role").all()).results.map((r) => [r.role, r.n])),
       notif: {
         resto: await restoConfigured(env),
         agency: !!env.NTFY_TOPIC_AGENCY || !!await chatAgency(env),
@@ -1271,6 +1275,17 @@ async function adminRoutes(env, ctx, req, url) {
     await env.DB.prepare(`INSERT INTO push_subs(role, endpoint, p256dh, auth, label, created_at, fails) VALUES(?,?,?,?,?,?,0)
       ON CONFLICT(endpoint) DO UPDATE SET role=excluded.role, p256dh=excluded.p256dh, auth=excluded.auth, label=excluded.label, fails=0`).bind(role, s.endpoint, s.keys.p256dh, s.keys.auth, clean(b.label, 80), Date.now()).run();
     await logEvent(env, "push_subscribe", `${role} ${clean(b.label, 80)}`);
+    ctx.waitUntil(sendPush(env, s, { title: `${R.name} : notifications activ\xE9es`, body: "Cet appareil recevra les nouvelles commandes.", tag: "check", url: "/admin" }));
+    return json({ ok: true });
+  }
+  if (p === "/api/admin/push-ack" && req.method === "POST") {
+    let b;
+    try {
+      b = await req.json();
+    } catch {
+      b = {};
+    }
+    await env.DB.prepare("UPDATE push_subs SET last_ack=?, fails=0 WHERE endpoint=? AND role=?").bind(Date.now(), String(b.endpoint || ""), role).run();
     return json({ ok: true });
   }
   if (p === "/api/admin/push-unsubscribe" && req.method === "POST") {
@@ -1396,6 +1411,10 @@ async function cron(env) {
       const upd = await env.DB.prepare("SELECT * FROM orders WHERE id=?").bind(o.id).first();
       await refreshRestoMessage(env, upd);
     }
+  }
+  if (isOpenAt(now) && await getSetting(env, "daily_check") !== mtl(now).date) {
+    await setSetting(env, "daily_check", mtl(now).date);
+    await pushTo(env, "resto", { title: `${R.name} : pr\xEAt pour aujourd'hui`, body: "V\xE9rification automatique : cet appareil re\xE7oit bien les commandes.", tag: "check", url: "/admin" });
   }
   if (isOpenAt(now) && await getSetting(env, "paused") !== "1" && !await restoReachable(env)) {
     const d = mtl(now).date;

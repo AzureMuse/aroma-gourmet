@@ -45,5 +45,5 @@ CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTE
 -- Appareils abonnés aux notifications Web Push (app installée), par rôle : resto | agence.
 CREATE TABLE IF NOT EXISTS push_subs (
   id INTEGER PRIMARY KEY AUTOINCREMENT, role TEXT NOT NULL, endpoint TEXT NOT NULL UNIQUE,
-  p256dh TEXT NOT NULL, auth TEXT NOT NULL, label TEXT, created_at INTEGER, last_ok INTEGER, fails INTEGER NOT NULL DEFAULT 0
+  p256dh TEXT NOT NULL, auth TEXT NOT NULL, label TEXT, created_at INTEGER, last_ok INTEGER, fails INTEGER NOT NULL DEFAULT 0, last_ack INTEGER
 );

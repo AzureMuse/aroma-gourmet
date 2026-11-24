@@ -174,9 +174,10 @@ async function pushTo(env, role, data){
 const pendingCount = async env => (await env.DB.prepare("SELECT COUNT(*) n FROM orders WHERE status='recue'").first()).n;
 
 // Mode sécurisé : on n'accepte des commandes en ligne que si au moins un appareil du restaurant peut les recevoir
-// (app installée avec notifications actives, ou tableau de bord ouvert depuis moins de 3 minutes).
+// Un appareil simplement abonné ne suffit pas : il doit avoir CONFIRMÉ la réception d'une notification (accusé envoyé par
+// l'app) dans les 26 dernières heures — vérification chaque jour à l'ouverture — ou avoir le tableau de bord ouvert (< 3 min).
 async function restoReachable(env){
-  const subs = (await env.DB.prepare("SELECT COUNT(*) n FROM push_subs WHERE role='resto' AND fails<3").first()).n;
+  const subs = (await env.DB.prepare("SELECT COUNT(*) n FROM push_subs WHERE role='resto' AND fails=0 AND last_ack>?").bind(Date.now() - 26 * 3600000).first()).n;
   const seen = +(await getSetting(env, "seen_resto") || 0);
   return subs > 0 || Date.now() - seen < 3 * MIN;
 }
@@ -453,7 +454,8 @@ async function adminRoutes(env, ctx, req, url){
     }
     return json({ ok:true, role, paused: await getSetting(env, "paused") === "1", now,
       reachable: await restoReachable(env),
-      devices: Object.fromEntries((await env.DB.prepare("SELECT role, COUNT(*) n FROM push_subs WHERE fails<3 GROUP BY role").all()).results.map(r => [r.role, r.n])),
+      devices: Object.fromEntries((await env.DB.prepare("SELECT role, COUNT(*) n FROM push_subs WHERE fails=0 AND last_ack>? GROUP BY role").bind(Date.now() - 26 * 3600000).all()).results.map(r => [r.role, r.n])),
+      subscribed: Object.fromEntries((await env.DB.prepare("SELECT role, COUNT(*) n FROM push_subs GROUP BY role").all()).results.map(r => [r.role, r.n])),
       notif: { resto: await restoConfigured(env), agency: !!env.NTFY_TOPIC_AGENCY || !!(await chatAgency(env)),
                lastError: (await env.DB.prepare("SELECT ts, detail FROM events WHERE kind IN ('ntfy_error','tg_error') AND ts>? ORDER BY ts DESC LIMIT 1").bind(now - DAY).first()) || null },
       orders: results.map(o => ({ ...o, items: JSON.parse(o.items_json), items_json: undefined, ip_hash: undefined, device_id: undefined, user_agent: undefined, fbp: undefined, fbc: undefined, token: undefined, idem: undefined })) });
@@ -496,6 +498,13 @@ async function adminRoutes(env, ctx, req, url){
       ON CONFLICT(endpoint) DO UPDATE SET role=excluded.role, p256dh=excluded.p256dh, auth=excluded.auth, label=excluded.label, fails=0`)
       .bind(role, s.endpoint, s.keys.p256dh, s.keys.auth, clean(b.label, 80), Date.now()).run();
     await logEvent(env, "push_subscribe", `${role} ${clean(b.label, 80)}`);
+    // Notification de confirmation : l'appareil ne devient opérationnel qu'après l'avoir réellement reçue (accusé).
+    ctx.waitUntil(sendPush(env, s, { title: `${R.name} : notifications activées`, body: "Cet appareil recevra les nouvelles commandes.", tag: "check", url: "/admin" }));
+    return json({ ok: true });
+  }
+  if(p === "/api/admin/push-ack" && req.method === "POST"){
+    let b; try { b = await req.json(); } catch { b = {}; }
+    await env.DB.prepare("UPDATE push_subs SET last_ack=?, fails=0 WHERE endpoint=? AND role=?").bind(Date.now(), String(b.endpoint || ""), role).run();
     return json({ ok: true });
   }
   if(p === "/api/admin/push-unsubscribe" && req.method === "POST"){
@@ -587,6 +596,11 @@ async function cron(env){
       const upd = await env.DB.prepare("SELECT * FROM orders WHERE id=?").bind(o.id).first();
       await refreshRestoMessage(env, upd);
     }
+  }
+  // Vérification quotidienne à l'ouverture : chaque appareil du resto doit confirmer qu'il reçoit (accusé de réception).
+  if(isOpenAt(now) && await getSetting(env, "daily_check") !== mtl(now).date){
+    await setSetting(env, "daily_check", mtl(now).date);
+    await pushTo(env, "resto", { title: `${R.name} : prêt pour aujourd'hui`, body: "Vérification automatique : cet appareil reçoit bien les commandes.", tag: "check", url: "/admin" });
   }
   // Mode sécurisé : les commandes sont suspendues automatiquement (restoReachable) ; Azure Muse est prévenue une fois par jour.
   if(isOpenAt(now) && await getSetting(env, "paused") !== "1" && !(await restoReachable(env))){

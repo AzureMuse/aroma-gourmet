@@ -241,6 +241,7 @@ async function enablePush(){
     const k = await api("/api/admin/push-key"); if(!k.key) return alertBox("Notifications pas encore configurées sur le serveur.");
     const sub = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(k.key) });
     const j = await api("/api/admin/push-subscribe", { subscription: sub.toJSON(), label: deviceLabel() });
+    try { localStorage.setItem("ag_ep", sub.endpoint); } catch {}
     if(!j.ok) alertBox(j.message || "Échec de l'activation.");
   } catch(e){ alertBox("Activation impossible : " + e.message); }
   renderApp(); load();
@@ -250,6 +251,9 @@ async function renderApp(){
   if(appBusy || !data) return; appBusy = true;
   try {
     const st = await pushState(), card = $("#appCard"), role = data.role, devs = data.devices || {};
+    // Notifications coupées par l'utilisateur : on retire l'abonnement côté serveur (l'appareil ne compte plus).
+    let ep = null; try { ep = localStorage.getItem("ag_ep"); } catch {}
+    if(ep && (st === "denied" || st === "off")){ await api("/api/admin/push-unsubscribe", { endpoint: ep }).catch(() => {}); try { localStorage.removeItem("ag_ep"); } catch {} }
     const install = standalone() ? "" : isIOS
       ? `<div class="line"><span>📲 <b>Installer l'app :</b> dans Safari, touchez le bouton Partager <b>⬆︎</b> puis « <b>Sur l'écran d'accueil</b> ». Ouvrez ensuite l'app depuis son icône.</span></div>`
       : installEvt ? `<div class="line"><span>📲 Installez l'app sur cet appareil pour recevoir les commandes.</span><button class="acc" id="doInstall">Installer l'app</button></div>`
@@ -260,7 +264,7 @@ async function renderApp(){
       denied: `<div class="line"><span>⛔ Notifications bloquées. Réglages du téléphone → Notifications → Aroma Commandes → Autoriser.</span></div>`,
       install: `<div class="line"><span>🔕 Sur iPhone, les notifications fonctionnent une fois l'app installée (ci-dessus).</span></div>`,
       unsupported: `<div class="line"><span>⚠️ Ce navigateur ne gère pas les notifications. Utilisez Safari (iPhone) ou Chrome (Android).</span></div>` }[st];
-    const health = `<div class="line"><span>${data.reachable ? "🟢 Commandes en ligne <b>actives</b>" : "🔴 Commandes en ligne <b>suspendues</b> : aucun appareil du restaurant ne peut les recevoir"} · appareils du restaurant avec notifications : <b>${devs.resto || 0}</b>${role === "agence" ? ` · appareils Azure Muse : <b>${devs.agence || 0}</b>` : ""}</span></div>`;
+    const health = `<div class="line"><span>${data.reachable ? "🟢 Commandes en ligne <b>actives</b>" : "🔴 Commandes en ligne <b>suspendues</b> : aucun appareil du restaurant ne peut les recevoir"} · appareils du restaurant <b>confirmés</b> : <b>${devs.resto || 0}</b>${(data.subscribed?.resto || 0) > (devs.resto || 0) ? ` (abonnés en attente de confirmation : ${(data.subscribed.resto || 0) - (devs.resto || 0)})` : ""}${role === "agence" ? ` · appareils Azure Muse : <b>${devs.agence || 0}</b>` : ""}</span></div>`;
     const allGood = st === "on" && standalone() && data.reachable;
     card.className = "appcard" + (allGood ? " ok" : "");
     card.innerHTML = `<div class="box">${allGood ? `<div class="line"><span>🟢 App installée · notifications actives · commandes en ligne actives</span><button class="sec" id="doTest">Tester</button></div>` : install + notif + health}</div>`;
