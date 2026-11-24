@@ -312,8 +312,9 @@ async function makeSession(env, role){
 }
 async function readSession(env, req){
   const m = /(?:^|;\s*)ag_s=([^;]+)/.exec(req.headers.get("cookie") || "");
-  if(!m || !env.SESSION_SECRET) return null;
-  const [role, exp, sig] = m[1].split(".");
+  const tok = m ? m[1] : (req.headers.get("x-ag-session") || "");
+  if(!tok || !env.SESSION_SECRET) return null;
+  const [role, exp, sig] = tok.split(".");
   if(!role || !exp || !sig || +exp < Date.now()) return null;
   return safeEq(sig, await hmac(env.SESSION_SECRET, role + "." + exp)) ? role : null;
 }
@@ -428,10 +429,19 @@ async function adminRoutes(env, ctx, req, url){
     const pw = String(b.password || "").slice(0, 200);
     const role = await verifyPassword(pw, env.ADMIN_PASSWORD_HASH) ? "resto" : await verifyPassword(pw, env.AGENCY_PASSWORD_HASH) ? "agence" : null;
     if(!role){ await env.DB.prepare("INSERT INTO login_attempts VALUES(?,?)").bind(ih, now).run(); return fail("bad_password", "Mot de passe incorrect.", 401); }
-    return json({ ok:true, role }, 200, { "set-cookie": sessionCookie(await makeSession(env, role), 30 * 86400) });
+    const session = await makeSession(env, role);
+    return json({ ok:true, role, session }, 200, { "set-cookie": sessionCookie(session, 30 * 86400) });
   }
   if(p === "/api/admin/logout") return json({ ok:true }, 200, { "set-cookie": sessionCookie("", 0) });
 
+  // Accusé de réception envoyé par l'app (service worker) : authentifié par l'adresse d'abonnement elle-même,
+  // secrète et propre à l'appareil — fonctionne même si le téléphone a perdu son cookie de session.
+  if(p === "/api/admin/push-ack" && req.method === "POST"){
+    let b; try { b = await req.json(); } catch { b = {}; }
+    const ep = String(b.endpoint || "");
+    if(ep.length > 40) await env.DB.prepare("UPDATE push_subs SET last_ack=?, fails=0 WHERE endpoint=?").bind(Date.now(), ep).run();
+    return json({ ok: true });
+  }
   const role = await readSession(env, req);
   if(!role) return fail("auth", "Session expirée. Reconnectez-vous.", 401);
   if(req.method === "POST"){                        // protection CSRF : même origine obligatoire
@@ -500,11 +510,6 @@ async function adminRoutes(env, ctx, req, url){
     await logEvent(env, "push_subscribe", `${role} ${clean(b.label, 80)}`);
     // Notification de confirmation : l'appareil ne devient opérationnel qu'après l'avoir réellement reçue (accusé).
     ctx.waitUntil(sendPush(env, s, { title: `${R.name} : notifications activées`, body: "Cet appareil recevra les nouvelles commandes.", tag: "check", url: "/admin" }));
-    return json({ ok: true });
-  }
-  if(p === "/api/admin/push-ack" && req.method === "POST"){
-    let b; try { b = await req.json(); } catch { b = {}; }
-    await env.DB.prepare("UPDATE push_subs SET last_ack=?, fails=0 WHERE endpoint=? AND role=?").bind(Date.now(), String(b.endpoint || ""), role).run();
     return json({ ok: true });
   }
   if(p === "/api/admin/push-unsubscribe" && req.method === "POST"){

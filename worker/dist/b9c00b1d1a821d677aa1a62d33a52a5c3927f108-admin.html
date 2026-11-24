@@ -56,7 +56,10 @@ dialog{background:var(--card);color:var(--txt);border:1px solid var(--line);bord
 <div id="login" class="hide">
   <h2 style="color:var(--gold)">Aroma Gourmet</h2>
   <p class="meta">Commandes en ligne — accès restaurant</p>
-  <form id="loginForm"><input type="password" id="pw" placeholder="Mot de passe" autocomplete="current-password" required><button>Se connecter</button></form>
+  <form id="loginForm" method="post" action="#"><input type="text" name="username" autocomplete="username" value="Aroma Gourmet" readonly style="position:absolute;left:-9999px" tabindex="-1" aria-hidden="true">
+  <input type="password" id="pw" name="password" placeholder="Mot de passe" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+  <label style="display:flex;gap:8px;align-items:center;justify-content:center;color:var(--muted);font-size:14px;margin:-4px 0 12px"><input type="checkbox" id="remember" checked style="width:auto;margin:0"> Rester connecté sur cet appareil (30 jours)</label>
+  <button>Se connecter</button></form>
   <p class="err" id="loginErr"></p>
 </div>
 
@@ -83,10 +86,12 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const LBL = {recue:"Nouvelle",acceptee:"Acceptée",prete:"Prête",recuperee:"Récupérée",refusee:"Refusée",absente:"Absent",expiree:"Non confirmée"};
 let tab = "active", data = null, known = new Set(), first = true, audio = null, alarm = null, wakeLock = null;
 
+function savedSession(){ try { return localStorage.getItem("ag_session") || ""; } catch { return ""; } }
 async function api(path, body){
-  const r = await fetch(path, body ? { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify(body) } : {});
+  const headers = { "content-type":"application/json" }, s = savedSession(); if(s) headers["x-ag-session"] = s;
+  const r = await fetch(path, body ? { method:"POST", headers, body: JSON.stringify(body) } : { headers });
   const j = await r.json().catch(() => ({ ok:false, message:"Réponse invalide" }));
-  if(r.status === 401 && path !== "/api/admin/login"){ show("login"); throw new Error("auth"); }
+  if(r.status === 401 && path !== "/api/admin/login"){ try { localStorage.removeItem("ag_session"); } catch {} show("login"); throw new Error("auth"); }
   return j;
 }
 function show(which){ $("#login").classList.toggle("hide", which !== "login"); $("#app").classList.toggle("hide", which !== "app"); }
@@ -95,6 +100,7 @@ $("#loginForm").onsubmit = async e => {
   e.preventDefault(); $("#loginErr").textContent = "";
   const j = await api("/api/admin/login", { password: $("#pw").value });
   if(!j.ok){ $("#loginErr").textContent = j.message; return; }
+  try { if($("#remember").checked && j.session) localStorage.setItem("ag_session", j.session); else localStorage.removeItem("ag_session"); } catch {}
   $("#pw").value = ""; start();
 };
 
@@ -193,7 +199,7 @@ document.addEventListener("click", async e => {
   const t = e.target.closest("[data-tab]");
   if(t){ tab = t.dataset.tab; document.querySelectorAll("[data-tab]").forEach(b => b.classList.toggle("on", b === t)); return load(); }
   if(e.target.id === "testTg" || e.target.id === "testAg"){ const j = await api("/api/admin/test-notification", { target: e.target.id === "testAg" ? "agency" : "resto" }); alertBox(j.ok ? "Notification envoyée. Vérifiez le téléphone." : j.message); return; }
-  if(e.target.id === "logout"){ await api("/api/admin/logout", {}); return show("login"); }
+  if(e.target.id === "logout"){ try { localStorage.removeItem("ag_session"); } catch {} await api("/api/admin/logout", {}); return show("login"); }
   if(e.target.id === "pauseBtn"){
     const v = await ask(data.paused ? `<p>Reprendre les commandes en ligne ?</p><div class="row"><button value="no" class="sec">Non</button><button value="yes" class="acc">Reprendre</button></div>`
       : `<p><b>Mettre en pause ?</b><br><span class="meta">Les clients ne pourront plus commander en ligne et seront invités à appeler.</span></p><div class="row"><button value="no" class="sec">Non</button><button value="yes" class="ref">Pause</button></div>`);
@@ -279,7 +285,7 @@ document.addEventListener("click", async e => {
 
 function start(){ show("app"); $("#soundBar").classList.toggle("hide", !!audio); load(); }
 setInterval(() => { if(!$("#app").classList.contains("hide") && tab === "active") load(); }, 8000);
-(async () => { const r = await fetch("/api/admin/orders?scope=active"); if(r.status === 401) show("login"); else start(); })();
+(async () => { const s = savedSession(); const r = await fetch("/api/admin/orders?scope=active", { headers: s ? { "x-ag-session": s } : {} }); if(r.status === 401) show("login"); else start(); })();
 </script>
 </body>
 </html>

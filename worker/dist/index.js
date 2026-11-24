@@ -530,7 +530,7 @@ var R = {
 };
 
 // src/index.js
-import ADMIN_HTML from "./12b0c83ae4ea8227dd9376037971131ee6ed448a-admin.html";
+import ADMIN_HTML from "./b9c00b1d1a821d677aa1a62d33a52a5c3927f108-admin.html";
 
 // src/webpush.js
 var enc = new TextEncoder();
@@ -1020,8 +1020,9 @@ async function makeSession(env, role) {
 __name(makeSession, "makeSession");
 async function readSession(env, req) {
   const m = /(?:^|;\s*)ag_s=([^;]+)/.exec(req.headers.get("cookie") || "");
-  if (!m || !env.SESSION_SECRET) return null;
-  const [role, exp, sig] = m[1].split(".");
+  const tok = m ? m[1] : req.headers.get("x-ag-session") || "";
+  if (!tok || !env.SESSION_SECRET) return null;
+  const [role, exp, sig] = tok.split(".");
   if (!role || !exp || !sig || +exp < Date.now()) return null;
   return safeEq(sig, await hmac(env.SESSION_SECRET, role + "." + exp)) ? role : null;
 }
@@ -1187,9 +1188,21 @@ async function adminRoutes(env, ctx, req, url) {
       await env.DB.prepare("INSERT INTO login_attempts VALUES(?,?)").bind(ih, now).run();
       return fail("bad_password", "Mot de passe incorrect.", 401);
     }
-    return json({ ok: true, role: role2 }, 200, { "set-cookie": sessionCookie(await makeSession(env, role2), 30 * 86400) });
+    const session = await makeSession(env, role2);
+    return json({ ok: true, role: role2, session }, 200, { "set-cookie": sessionCookie(session, 30 * 86400) });
   }
   if (p === "/api/admin/logout") return json({ ok: true }, 200, { "set-cookie": sessionCookie("", 0) });
+  if (p === "/api/admin/push-ack" && req.method === "POST") {
+    let b;
+    try {
+      b = await req.json();
+    } catch {
+      b = {};
+    }
+    const ep = String(b.endpoint || "");
+    if (ep.length > 40) await env.DB.prepare("UPDATE push_subs SET last_ack=?, fails=0 WHERE endpoint=?").bind(Date.now(), ep).run();
+    return json({ ok: true });
+  }
   const role = await readSession(env, req);
   if (!role) return fail("auth", "Session expir\xE9e. Reconnectez-vous.", 401);
   if (req.method === "POST") {
@@ -1276,16 +1289,6 @@ async function adminRoutes(env, ctx, req, url) {
       ON CONFLICT(endpoint) DO UPDATE SET role=excluded.role, p256dh=excluded.p256dh, auth=excluded.auth, label=excluded.label, fails=0`).bind(role, s.endpoint, s.keys.p256dh, s.keys.auth, clean(b.label, 80), Date.now()).run();
     await logEvent(env, "push_subscribe", `${role} ${clean(b.label, 80)}`);
     ctx.waitUntil(sendPush(env, s, { title: `${R.name} : notifications activ\xE9es`, body: "Cet appareil recevra les nouvelles commandes.", tag: "check", url: "/admin" }));
-    return json({ ok: true });
-  }
-  if (p === "/api/admin/push-ack" && req.method === "POST") {
-    let b;
-    try {
-      b = await req.json();
-    } catch {
-      b = {};
-    }
-    await env.DB.prepare("UPDATE push_subs SET last_ack=?, fails=0 WHERE endpoint=? AND role=?").bind(Date.now(), String(b.endpoint || ""), role).run();
     return json({ ok: true });
   }
   if (p === "/api/admin/push-unsubscribe" && req.method === "POST") {
