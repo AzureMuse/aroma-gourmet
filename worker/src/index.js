@@ -104,7 +104,7 @@ function priceCart(items, pickupMs){
     if(it.name && it.name !== art.name) return { error: "Le menu a été mis à jour. Rechargez la page.", code: "menu_changed" };
     const promo = R.promos.find(x => x.category === cid);
     if(promo && (!promo.days.includes(p.dow) || p.min < toMin(promo.from) || p.min >= toMin(promo.to)))
-      return { error: `« ${art.name} » est offert seulement de ${promo.from.replace(":"," h ")} à ${promo.to.replace(":"," h ")}. Choisissez une heure dans ce créneau ou retirez-le.`, code: "promo_hours" };
+      return { error: `« ${art.name} » est offert seulement du lundi au vendredi, de ${promo.from.replace(/:00$/, "").replace(":", " h ")} h à ${promo.to.replace(/:00$/, "").replace(":", " h ")} h. Choisissez une heure dans ce créneau ou retirez-le.`, code: "promo_hours" };
     lines.push({ key: `${cid}:${idx}`, name: art.name, price: art.price, qty });
     total += art.price * qty; n += qty;
   }

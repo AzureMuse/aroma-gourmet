@@ -20,7 +20,7 @@ export const R = {
 
   // Promotions : contrôlées par le serveur sur l'HEURE DE RETRAIT, pas sur l'heure de commande.
   promos: [
-    { category: "rabais", days: [0,1,2,3,4,5,6], from: "11:00", to: "18:00" }
+    { category: "rabais", days: [1,2,3,4,5], from: "11:00", to: "18:00" }   // du lundi au vendredi
   ],
 
   // Anti-abus.

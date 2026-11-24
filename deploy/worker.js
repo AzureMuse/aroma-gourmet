@@ -508,7 +508,8 @@ var R = {
   maxDaysAhead: 7,
   // Promotions : contrôlées par le serveur sur l'HEURE DE RETRAIT, pas sur l'heure de commande.
   promos: [
-    { category: "rabais", days: [0, 1, 2, 3, 4, 5, 6], from: "11:00", to: "18:00" }
+    { category: "rabais", days: [1, 2, 3, 4, 5], from: "11:00", to: "18:00" }
+    // du lundi au vendredi
   ],
   // Anti-abus.
   limits: {
@@ -752,7 +753,7 @@ function priceCart(items, pickupMs) {
     if (it.name && it.name !== art.name) return { error: "Le menu a \xE9t\xE9 mis \xE0 jour. Rechargez la page.", code: "menu_changed" };
     const promo = R.promos.find((x) => x.category === cid);
     if (promo && (!promo.days.includes(p.dow) || p.min < toMin(promo.from) || p.min >= toMin(promo.to)))
-      return { error: `\xAB ${art.name} \xBB est offert seulement de ${promo.from.replace(":", " h ")} \xE0 ${promo.to.replace(":", " h ")}. Choisissez une heure dans ce cr\xE9neau ou retirez-le.`, code: "promo_hours" };
+      return { error: `\xAB ${art.name} \xBB est offert seulement du lundi au vendredi, de ${promo.from.replace(/:00$/, "").replace(":", " h ")} h \xE0 ${promo.to.replace(/:00$/, "").replace(":", " h ")} h. Choisissez une heure dans ce cr\xE9neau ou retirez-le.`, code: "promo_hours" };
     lines.push({ key: `${cid}:${idx}`, name: art.name, price: art.price, qty });
     total += art.price * qty;
     n += qty;
