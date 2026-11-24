@@ -502,17 +502,46 @@ function isOpenNow(){
   const t = now.getHours() * 60 + now.getMinutes();
   return t >= w.open && t <= w.close - CONFIG.lastOrderMin;
 }
-function slots(){
-  const now = new Date(), w = todayWindow(now);
+// Créneaux d'un jour donné (offset 0 = aujourd'hui), à partir de la minute "from".
+function daySlots(offset, from){
+  const d = new Date(); d.setDate(d.getDate() + offset);
+  const w = todayWindow(d);
   if(!w) return [];
-  const t = now.getHours() * 60 + now.getMinutes();
-  let start = Math.max(w.open, t + CONFIG.leadMin);
+  let start = Math.max(w.open, from);
   start = Math.ceil(start / CONFIG.slotMin) * CONFIG.slotMin;
   const end = w.close - CONFIG.lastOrderMin;
   const out = [];
-  for(let s = start; s <= end; s += CONFIG.slotMin) out.push(minToHHMM(s));
+  for(let s = start; s <= end; s += CONFIG.slotMin) out.push(s);
   return out;
 }
+// La date est toujours écrite pour les autres jours : le restaurant lit la précommande le lendemain.
+function dayLabel(offset){
+  if(offset === 0) return "aujourd'hui,";
+  const d = new Date(); d.setDate(d.getDate() + offset);
+  const j = ["dim.","lun.","mar.","mer.","jeu.","ven.","sam."][d.getDay()];
+  const m = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."][d.getMonth()];
+  return (offset === 1 ? "demain, " : "") + j + " " + d.getDate() + " " + m + ",";
+}
+// Ouvert : créneaux d'aujourd'hui (heures seules).
+// Fermé : précommande, uniquement aux heures d'ouverture —
+// plus tard aujourd'hui si le resto n'a pas encore ouvert, sinon le prochain jour d'ouverture.
+function slots(){
+  const now = new Date();
+  const t = now.getHours() * 60 + now.getMinutes();
+  if(isOpenNow()){
+    const today = daySlots(0, t + CONFIG.leadMin);
+    if(today.length) return today.map(minToHHMM);
+  }
+  for(let off = 0; off <= 7; off++){
+    const list = daySlots(off, off === 0 ? t + CONFIG.leadMin : 0);
+    if(list.length){
+      const lbl = dayLabel(off);
+      return list.map(m => lbl.charAt(0).toUpperCase() + lbl.slice(1) + " " + minToHHMM(m));
+    }
+  }
+  return [];
+}
+function isPreorder(){ return !isOpenNow() || !daySlots(0, new Date().getHours() * 60 + new Date().getMinutes() + CONFIG.leadMin).length; }
 
 /* ================= Rendu du menu ================= */
 function renderStatus(){
@@ -531,17 +560,17 @@ function renderStatus(){
     return;
   }
 
-  if(isOpenNow()){
+  if(!isPreorder()){
     const sl = slots();
     box.innerHTML = '<div class="status open"><b>Ouvert maintenant.</b> ' +
       (sl.length ? 'Prochain créneau&nbsp;: ' + esc(sl[0]) + '. Comptez environ ' + CONFIG.leadMin + ' minutes de préparation.' : '') +
       '</div>';
   } else {
     const jours = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
-    box.innerHTML = '<div class="status closed"><b>Le restaurant est fermé pour l\'instant.</b> ' +
+    box.innerHTML = '<div class="status closed"><b>' + (isOpenNow() ? 'Les commandes en ligne sont terminées pour aujourd\'hui.' : 'Le restaurant est fermé pour l\'instant.') + '</b> ' +
       (w ? 'Aujourd\'hui&nbsp;: ' + minToHHMM(w.open) + ' à ' + minToHHMM(w.close) + '. '
          : 'Fermé le ' + jours[new Date().getDay()] + '. ') +
-      'Vous pouvez parcourir le menu, mais la commande n\'est possible qu\'aux heures d\'ouverture.</div>';
+      (slots().length ? 'Vous pouvez précommander dès maintenant, à partir de ' + esc(slots()[0].toLowerCase()) + '.' : '') + '</div>';
   }
 }
 
@@ -640,8 +669,8 @@ function renderSheet(){
         'Le paiement se fait sur place, à votre arrivée.</p>' +
       '</div>' +
       '<div style="margin-top:18px">' +
-        '<button class="cta wide" type="button" id="toDetails"' + (isOpenNow() ? '' : ' disabled') + '>' +
-          (isOpenNow() ? 'Continuer' : 'Restaurant fermé') +
+        '<button class="cta wide" type="button" id="toDetails"' + (slots().length ? '' : ' disabled') + '>' +
+          (isPreorder() ? 'Précommander' : 'Continuer') +
         '</button>' +
       '</div>';
     return;
@@ -671,11 +700,11 @@ function renderSheet(){
         '</fieldset>' +
         '<fieldset id="fsHeure">' +
           '<legend>À quelle heure&nbsp;?</legend>' +
-          '<p class="hint">Comptez environ ' + CONFIG.leadMin + ' minutes de préparation.</p>' +
+          '<p class="hint">' + (isPreorder() ? 'Le restaurant est fermé pour l\'instant&nbsp;: choisissez une heure pendant les heures d\'ouverture. Votre commande sera prête pour cette heure-là.' : 'Comptez environ ' + CONFIG.leadMin + ' minutes de préparation.') + '</p>' +
           '<label class="fld"><span>Heure d\'arrivée</span>' +
             '<select name="heure" required>' +
               '<option value="">Choisir une heure…</option>' +
-              '<option value="Dès que possible">Dès que possible</option>' +
+              (isPreorder() ? '' : '<option value="Dès que possible">Dès que possible</option>') +
               sl.map(s => '<option value="' + esc(s) + '">' + esc(s) + '</option>').join("") +
             '</select>' +
           '</label>' +
@@ -706,12 +735,12 @@ function renderSheet(){
 
   if(step === "done"){
     const o = lastOrder;
-    $("#sheetTitle").textContent = "Commande envoyée";
+    $("#sheetTitle").textContent = o.pre ? "Précommande envoyée" : "Commande envoyée";
     b.innerHTML =
       '<div class="done">' +
         '<div class="tick">✓</div>' +
         '<h2>C\'est parti, ' + esc(o.nom.split(" ")[0]) + '&nbsp;!</h2>' +
-        '<p>Le restaurant a reçu votre commande. Donnez votre numéro ou votre nom au comptoir.</p>' +
+        '<p>' + (o.pre ? 'Le restaurant a reçu votre précommande pour ' + esc(o.heure.toLowerCase()) + '. ' : 'Le restaurant a reçu votre commande. ') + 'Donnez votre numéro ou votre nom au comptoir.</p>' +
       '</div>' +
       '<div class="ticket">' +
         '<div class="lbl">Numéro de commande</div>' +
@@ -745,7 +774,8 @@ function orderNumber(){
 
 function orderText(o){
   const lines = o.lines.map(l => "  " + l.qty + " x " + l.name + "   " + money(l.price * l.qty)).join("\n");
-  return "NOUVELLE COMMANDE  " + o.num + "\n" +
+  return (o.pre ? "PRECOMMANDE  " : "NOUVELLE COMMANDE  ") + o.num + "\n" +
+    (o.pre ? "A preparer pour : " + o.heure + "\n" : "") +
     "----------------------------\n" +
     o.mode.toUpperCase() + "  ·  " + o.heure + "\n" +
     "Nom : " + o.nom + "\n" +
@@ -768,7 +798,7 @@ function ascii(s){
 
 async function sendOrder(o){
   const body = orderText(o);
-  const title = ascii("Commande " + o.num + " - " + o.mode.toUpperCase() + " - " + o.heure);
+  const title = ascii((o.pre ? "PRECOMMANDE " : "Commande ") + o.num + " - " + o.mode.toUpperCase() + " - " + o.heure);
   const results = await Promise.allSettled(
     CONFIG.ntfy.map(topic => fetch("https://ntfy.sh/" + topic, {
       method: "POST",
@@ -857,6 +887,7 @@ document.addEventListener("submit", async e => {
   const now = new Date();
   const o = {
     num: orderNumber(),
+    pre: isPreorder(),
     mode: mode.value,
     heure,
     nom,
