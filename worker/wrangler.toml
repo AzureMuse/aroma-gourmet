@@ -7,6 +7,8 @@ workers_dev = true
 
 [vars]
 ENV = "prod"
+# Lien ouvert en touchant une notification ntfy (à compléter après le premier déploiement).
+DASHBOARD_URL = ""
 
 [[d1_databases]]
 binding = "DB"

@@ -53,7 +53,7 @@ dialog{background:var(--card);color:var(--txt);border:1px solid var(--line);bord
 <div id="app" class="hide">
   <header>
     <h1>Commandes · Aroma</h1>
-    <span class="pill" id="tgPill">Telegram…</span>
+    <span class="pill" id="tgPill">Notifications…</span>
     <span class="pill" id="netPill">Connexion…</span>
     <button class="sec" id="pauseBtn">Pause</button>
   </header>
@@ -113,8 +113,9 @@ async function load(){
     $("#netPill").textContent = "En ligne"; $("#netPill").className = "pill ok";
   } catch(e){ if(e.message === "auth") return; $("#netPill").textContent = "Hors ligne !"; $("#netPill").className = "pill bad"; return; }
   if(!data.ok) return;
-  const t = data.telegram;
-  $("#tgPill").textContent = t.resto ? "Telegram relié" : "Telegram NON relié"; $("#tgPill").className = "pill " + (t.resto ? "ok" : "bad");
+  const t = data.notif, err = t.lastError && Date.now() - t.lastError.ts < 3600000;
+  $("#tgPill").textContent = !t.resto ? "Notifications NON configurées" : err ? "Notification en échec !" : "Notifications OK";
+  $("#tgPill").className = "pill " + (t.resto && !err ? "ok" : "bad");
   $("#pauseBtn").textContent = data.paused ? "Reprendre" : "Pause"; $("#pauseBtn").className = data.paused ? "ref" : "sec";
   for(const o of data.orders) if(!known.has(o.id)){ known.add(o.id); }
   first = false; render(); updateAlarm();
@@ -169,7 +170,7 @@ function render(){
     <table><tr><th>Source</th><th>Reçues</th><th>Récupérées</th><th>Ventes</th></tr>${Object.entries(src).map(([k,v]) => `<tr><td>${esc(k)}</td><td>${v.n}</td><td>${v.ok}</td><td>${money(v.sub)}</td></tr>`).join("")}</table>
     <h3 class="meta" style="margin-top:20px">Commandes</h3>
     <table><tr><th>N°</th><th>Date</th><th>Statut</th><th>Total</th><th>Source</th></tr>${os.map(o => `<tr><td>${esc(o.num)}</td><td>${new Date(o.created_at).toLocaleString("fr-CA",{dateStyle:"short",timeStyle:"short"})}</td><td>${LBL[o.status]}</td><td>${money(o.subtotal)}</td><td>${esc(o.utm_source || "direct")}${o.utm_campaign ? " · " + esc(o.utm_campaign) : ""}</td></tr>`).join("")}</table>
-    <p style="margin-top:20px"><button class="sec" id="testTg">Envoyer une notification test</button> <button class="sec" id="logout">Se déconnecter</button></p>`;
+    <p style="margin-top:20px"><button class="sec" id="testTg">Test notification restaurant</button> <button class="sec" id="testAg">Test notification Azure Muse</button> <button class="sec" id="logout">Se déconnecter</button></p>`;
 }
 
 function ask(html){ return new Promise(res => { $("#dlgForm").innerHTML = html; const d = $("#dlg"); d.onclose = () => res(d.returnValue); d.showModal(); }); }
@@ -177,7 +178,7 @@ function ask(html){ return new Promise(res => { $("#dlgForm").innerHTML = html; 
 document.addEventListener("click", async e => {
   const t = e.target.closest("[data-tab]");
   if(t){ tab = t.dataset.tab; document.querySelectorAll("[data-tab]").forEach(b => b.classList.toggle("on", b === t)); return load(); }
-  if(e.target.id === "testTg"){ const j = await api("/api/admin/test-notification", {}); alertBox(j.ok ? "Notification envoyée. Vérifiez le téléphone." : j.message); return; }
+  if(e.target.id === "testTg" || e.target.id === "testAg"){ const j = await api("/api/admin/test-notification", { target: e.target.id === "testAg" ? "agency" : "resto" }); alertBox(j.ok ? "Notification envoyée. Vérifiez le téléphone." : j.message); return; }
   if(e.target.id === "logout"){ await api("/api/admin/logout", {}); return show("login"); }
   if(e.target.id === "pauseBtn"){
     const v = await ask(data.paused ? `<p>Reprendre les commandes en ligne ?</p><div class="row"><button value="no" class="sec">Non</button><button value="yes" class="acc">Reprendre</button></div>`

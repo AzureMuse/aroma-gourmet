@@ -10,14 +10,16 @@ Client (page GitHub Pages, index.html)
    ▼
 Cloudflare Worker (worker/src/index.js)  ── vérifie tout côté serveur
    │  ├─ D1 : enregistre la commande (worker/schema.sql)
-   │  ├─ Telegram : notifie le resto (canal privé, boutons Accepter/Refuser)
+   │  ├─ ntfy : alerte « une commande attend » (aucun détail) + lien vers le tableau de bord
    │  └─ Meta Conversions API : Lead (envoi) / Purchase (acceptée), seulement avec consentement
    ▼
 Tableau de bord /admin (même Worker, session HttpOnly)   ←→  Koussaya (téléphone ou tablette)
 Cron chaque minute : rappel resto 5 min → alerte Azure Muse 8 min → « non confirmée » 20 min ; purge 90 jours
 ```
 
-Tout est gratuit dans les quotas Cloudflare (Workers Free : 100 000 requêtes/jour ; D1 Free ; Turnstile gratuit) et Telegram.
+Tout est gratuit dans les quotas Cloudflare (Workers Free : 100 000 requêtes/jour ; D1 Free ; Turnstile gratuit) et ntfy.sh.
+
+**Limite ntfy.sh gratuit :** 250 messages/jour et 60 envois d'un coup puis 1 toutes les 5 s, comptés **par adresse IP**. Les serveurs Cloudflare partagent leurs IP : si la limite est atteinte (HTTP 429), l'échec est noté, le tableau de bord affiche « Notification en échec ! », la cron renvoie l'alerte et Azure Muse est prévenue. Si ça se produit souvent : forfait ntfy payant (jeton `NTFY_TOKEN`) ou Telegram (déjà codé, voir section 5), avec l'accord de Souad.
 
 ## 2. Ce que le serveur contrôle (rien n'est fait confiance au navigateur)
 - **Turnstile** validé côté serveur (`siteverify`) ; aucune clé secrète dans GitHub.
@@ -48,7 +50,10 @@ Tout est gratuit dans les quotas Cloudflare (Workers Free : 100 000 requêtes/jo
 | `HASH_SALT` | 32+ caractères aléatoires (hachage des IP) |
 | `ADMIN_PASSWORD_HASH` | `node tools/hash-password.mjs "<mot de passe resto>"` |
 | `AGENCY_PASSWORD_HASH` | idem, mot de passe Azure Muse |
-| `TG_BOT_TOKEN` | Jeton du bot Telegram (BotFather) |
+| `NTFY_TOPIC_RESTO` | Nom secret du canal ntfy du resto (40+ caractères aléatoires). **Pour le remplacer** : nouveau secret, puis s'abonner au nouveau nom dans l'appli ntfy |
+| `NTFY_TOPIC_AGENCY` | Nom secret du canal d'alerte Azure Muse |
+| `NTFY_SERVER` / `NTFY_TOKEN` | Facultatifs : autre serveur ntfy, ou jeton d'un compte payant |
+| `TG_BOT_TOKEN` | Facultatif (Telegram, non utilisé pour l'instant) : jeton du bot |
 | `TG_WEBHOOK_SECRET` | Aléatoire ; vérifie que les appels viennent bien de Telegram |
 | `TG_LINK_RESTO` / `TG_LINK_AGENCY` | Codes de liaison à usage interne (aléatoires) |
 | `META_PIXEL_ID` / `META_CAPI_TOKEN` | Pixel et jeton Conversions API (facultatif) |
@@ -64,14 +69,16 @@ npx wrangler deploy
 # Webhook Telegram :
 curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<worker>/api/tg&secret_token=<TG_WEBHOOK_SECRET>&allowed_updates=[\"message\",\"callback_query\"]"
 ```
-Relier le téléphone du resto : ouvrir `https://t.me/<nom_du_bot>?start=<TG_LINK_RESTO>` sur son téléphone, appuyer sur Démarrer. Même chose pour Azure Muse avec `TG_LINK_AGENCY`.
+Variable `DASHBOARD_URL` (wrangler.toml) = adresse du tableau de bord, ouverte en touchant une notification.
+Abonner le téléphone du resto : appli ntfy → « + » → nom du canal `NTFY_TOPIC_RESTO` → réglages du canal : priorité urgente avec son, autoriser les notifications sur l'écran verrouillé. Même chose pour Azure Muse avec `NTFY_TOPIC_AGENCY`.
+(Telegram, si un jour activé) Relier le téléphone : ouvrir `https://t.me/<nom_du_bot>?start=<TG_LINK_RESTO>` sur son téléphone, appuyer sur Démarrer. Même chose pour Azure Muse avec `TG_LINK_AGENCY`.
 Puis dans `index.html` : `api`, `turnstileSiteKey`, et `ordersEnabled: true` seulement après la checklist.
 
 Environnement de test séparé : `npx wrangler deploy --env test` (base `-test`, aucun vrai client).
 
 ## 7. Procédure de secours
-1. **Notification non reçue** : le tableau de bord sonne aussi (laisser la tablette ouverte, « Activer le son »). Rappel automatique à 5 min, alerte Azure Muse à 8 min.
-2. **Telegram en panne / téléphone perdu** : bouton **Pause** du tableau de bord → la page affiche « Appeler pour commander ». Relier un autre téléphone avec le lien de liaison.
+1. **Notification non reçue** : bouton « Test notification » dans l'Historique ; le tableau de bord sonne aussi (laisser la tablette ouverte, « Activer le son »). Rappel automatique à 5 min, alerte Azure Muse à 8 min.
+2. **ntfy en panne / téléphone perdu / canal découvert** : bouton **Pause** → la page affiche « Appeler pour commander ». Changer `NTFY_TOPIC_RESTO` et réabonner le téléphone.
 3. **Worker en panne** : la page repasse automatiquement en mode menu + appel. Sinon : `ordersEnabled: false` dans `index.html`.
 4. **Fausses commandes** : bouton « Client absent », puis « Bloquer ce numéro » (décision du resto), ou baisser les limites dans `restaurant.js`.
 

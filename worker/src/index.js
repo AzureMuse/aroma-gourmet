@@ -129,6 +129,27 @@ async function tg(env, method, body){
 const chatResto = env => getSetting(env, "tg_resto");
 const chatAgency = env => getSetting(env, "tg_agency");
 
+// ntfy : le nom des canaux est un secret Cloudflare (NTFY_TOPIC_RESTO / NTFY_TOPIC_AGENCY), jamais dans GitHub.
+// Un canal ntfy reste techniquement public : on n'y envoie AUCUN détail de commande ni donnée client,
+// seulement « une commande attend » + un lien vers le tableau de bord protégé.
+// Pour remplacer un canal : changer le secret, puis s'abonner au nouveau nom dans l'appli ntfy.
+async function ntfy(env, target, { title, message, priority = 5, tags = ["bell"] }){
+  const topic = target === "resto" ? env.NTFY_TOPIC_RESTO : env.NTFY_TOPIC_AGENCY;
+  if(!topic) return false;
+  const body = { topic, title, message, priority, tags };
+  if(env.DASHBOARD_URL){ body.click = env.DASHBOARD_URL; body.actions = [{ action: "view", label: "Ouvrir le tableau de bord", url: env.DASHBOARD_URL, clear: true }]; }
+  if(env.NTFY_FAKE === "1"){ await logEvent(env, "ntfy_fake", target + " " + JSON.stringify(body)); return true; }
+  try {
+    const headers = { "content-type": "application/json" };
+    if(env.NTFY_TOKEN) headers.authorization = "Bearer " + env.NTFY_TOKEN;
+    const r = await fetch((env.NTFY_SERVER || "https://ntfy.sh").replace(/\/$/, ""), { method: "POST", headers, body: JSON.stringify(body) });
+    if(r.ok) return true;
+    await logEvent(env, "ntfy_error", `${target} HTTP ${r.status}${r.status === 429 ? " (limite ntfy atteinte)" : ""}`);
+  } catch(e){ await logEvent(env, "ntfy_error", `${target} ${e}`); }
+  return false;
+}
+const restoConfigured = async env => !!env.NTFY_TOPIC_RESTO || !!(await chatResto(env));
+
 // Aucune donnée personnelle dans la notification : numéro, service, heure, articles, total.
 function orderMessage(o){
   const items = JSON.parse(o.items_json).map(l => `${l.qty} × ${l.name}`).join("\n");
@@ -149,18 +170,30 @@ function keyboard(o){
   return { inline_keyboard: [] };
 }
 async function notifyResto(env, o, { silent = false } = {}){
+  let ok = await ntfy(env, "resto", {
+    title: `${R.name} : ${o.preorder ? "nouvelle précommande" : "nouvelle commande"}`,
+    message: `${o.preorder ? "Une précommande attend votre confirmation." : "Une commande attend votre réponse."} Ouvrez le tableau de bord pour l'accepter ou la refuser.`,
+    priority: silent ? 2 : 5, tags: ["hamburger"] });
   const chat = await chatResto(env);
-  if(!chat) return false;
-  const r = await tg(env, "sendMessage", { chat_id: chat, text: orderMessage(o), reply_markup: keyboard(o), disable_notification: silent });
-  if(r.ok){ await env.DB.prepare("UPDATE orders SET notify_ok=1, tg_msg_id=? WHERE id=?").bind(r.result.message_id, o.id).run(); return true; }
-  await logEvent(env, "tg_error", r.description);
-  return false;
+  if(chat){
+    const r = await tg(env, "sendMessage", { chat_id: chat, text: orderMessage(o), reply_markup: keyboard(o), disable_notification: silent });
+    if(r.ok){ await env.DB.prepare("UPDATE orders SET tg_msg_id=? WHERE id=?").bind(r.result.message_id, o.id).run(); ok = true; }
+    else await logEvent(env, "tg_error", r.description);
+  }
+  if(ok) await env.DB.prepare("UPDATE orders SET notify_ok=1 WHERE id=?").bind(o.id).run();
+  return ok;
+}
+async function remindResto(env, o){
+  await ntfy(env, "resto", { title: `${R.name} : RAPPEL`, message: `Une commande attend votre réponse depuis ${R.escalation.remindRestoMin} minutes. Ouvrez le tableau de bord.`, priority: 5, tags: ["warning"] });
+  const chat = await chatResto(env);
+  if(chat) await tg(env, "sendMessage", { chat_id: chat, text: `⏰ RAPPEL : la commande ${o.num} attend votre réponse depuis ${R.escalation.remindRestoMin} min.`, reply_to_message_id: o.tg_msg_id || undefined });
 }
 async function refreshRestoMessage(env, o){
   const chat = await chatResto(env);
   if(chat && o.tg_msg_id) await tg(env, "editMessageText", { chat_id: chat, message_id: o.tg_msg_id, text: orderMessage(o), reply_markup: keyboard(o) });
 }
 async function notifyAgency(env, text){
+  await ntfy(env, "agency", { title: `Azure Muse : alerte ${R.name}`, message: text, priority: 4, tags: ["rotating_light"] });
   const chat = await chatAgency(env);
   if(chat) await tg(env, "sendMessage", { chat_id: chat, text });
 }
@@ -377,7 +410,8 @@ async function adminRoutes(env, ctx, req, url){
       o.absences = a.n; o.blocked = !!a.b;
     }
     return json({ ok:true, role, paused: await getSetting(env, "paused") === "1", now,
-      telegram: { resto: !!(await chatResto(env)), agency: !!(await chatAgency(env)) },
+      notif: { resto: await restoConfigured(env), agency: !!env.NTFY_TOPIC_AGENCY || !!(await chatAgency(env)),
+               lastError: (await env.DB.prepare("SELECT ts, detail FROM events WHERE kind IN ('ntfy_error','tg_error') AND ts>? ORDER BY ts DESC LIMIT 1").bind(now - DAY).first()) || null },
       orders: results.map(o => ({ ...o, items: JSON.parse(o.items_json), items_json: undefined, ip_hash: undefined, device_id: undefined, user_agent: undefined, fbp: undefined, fbc: undefined, token: undefined, idem: undefined })) });
   }
   const m = /^\/api\/admin\/orders\/(\d+)\/(accept|refuse|ready|picked|noshow)$/.exec(p);
@@ -410,10 +444,10 @@ async function adminRoutes(env, ctx, req, url){
     return json({ ok:true, days, rows: by.results });
   }
   if(p === "/api/admin/test-notification" && req.method === "POST"){
-    const chat = await chatResto(env);
-    if(!chat) return fail("no_chat", "Le téléphone du restaurant n'est pas encore relié à Telegram.");
-    const r = await tg(env, "sendMessage", { chat_id: chat, text: "🔔 Test de notification — si vous lisez ceci avec le son, tout fonctionne." });
-    return r.ok ? json({ ok:true }) : fail("tg", "Échec de l'envoi Telegram : " + r.description, 502);
+    let b; try { b = await req.json(); } catch { b = {}; }
+    const target = b.target === "agency" ? "agency" : "resto";
+    const ok = await ntfy(env, target, { title: `${R.name} : test`, message: "Test de notification. Si vous l'entendez téléphone verrouillé, tout fonctionne.", priority: 5 });
+    return ok ? json({ ok:true }) : fail("ntfy", "Échec de l'envoi ntfy (voir le journal). Vérifiez le canal configuré dans Cloudflare.", 502);
   }
   return fail("not_found", "Introuvable.", 404);
 }
@@ -463,14 +497,13 @@ async function cron(env){
     const age = now - o.notify_from;
     if(o.alert_level === 0){                                     // notification ratée ou envoyée en silence la nuit
       if(await notifyResto(env, o)) await env.DB.prepare("UPDATE orders SET alert_level=1 WHERE id=?").bind(o.id).run();
-      else if(age >= E.alertAgencyMin * MIN){ await notifyAgency(env, `🚨 ${R.name} : impossible d'envoyer la commande ${o.num} au restaurant (Telegram). Appelez le resto : ${R.tel}.`);
+      else if(age >= E.alertAgencyMin * MIN){ await notifyAgency(env, `${R.name} : la notification de la commande ${o.num} n'a pas pu être envoyée au restaurant. Appelez le resto : ${R.tel}.`);
         await env.DB.prepare("UPDATE orders SET alert_level=3 WHERE id=?").bind(o.id).run(); }
     } else if(o.alert_level === 1 && age >= E.remindRestoMin * MIN){
-      const chat = await chatResto(env);
-      if(chat) await tg(env, "sendMessage", { chat_id: chat, text: `⏰ RAPPEL : la commande ${o.num} attend votre réponse depuis ${E.remindRestoMin} min. Acceptez ou refusez ci-dessus.`, reply_to_message_id: o.tg_msg_id || undefined });
+      await remindResto(env, o);
       await env.DB.prepare("UPDATE orders SET alert_level=2 WHERE id=?").bind(o.id).run();
     } else if(o.alert_level === 2 && age >= E.alertAgencyMin * MIN){
-      await notifyAgency(env, `⚠️ ${R.name} : la commande ${o.num} (${o.slot_label}, ${money(o.subtotal)}) n'est pas confirmée depuis ${E.alertAgencyMin} min. Appelez le resto : ${R.tel}.`);
+      await notifyAgency(env, `${R.name} : la commande ${o.num} n'est pas confirmée depuis ${E.alertAgencyMin} min. Appelez le resto : ${R.tel}.`);
       await env.DB.prepare("UPDATE orders SET alert_level=3 WHERE id=?").bind(o.id).run();
     }
     if(o.alert_level >= 1 && age >= E.expireMin * MIN){
@@ -515,7 +548,7 @@ export default {
       } else if(p.startsWith("/api/track/") && req.method === "GET") res = await trackOrder(env, p.slice(11));
       else if(p === "/api/status" && req.method === "GET"){
         const paused = await getSetting(env, "paused") === "1";
-        res = json({ ok:true, accepting: !paused && !!(await chatResto(env)), paused, openNow: isOpenAt(Date.now()) });
+        res = json({ ok:true, accepting: !paused && await restoConfigured(env), paused, openNow: isOpenAt(Date.now()) });
       } else res = fail("not_found", "Introuvable.", 404);
       for(const [k, v] of Object.entries(cors)) res.headers.set(k, v);
       return res;
