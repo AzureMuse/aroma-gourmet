@@ -7,6 +7,11 @@
 <meta name="theme-color" content="#0d0d0d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Commandes — Aroma Gourmet</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-title" content="Aroma Commandes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <style>
 :root{--bg:#0d0d0d;--card:#181818;--line:#2a2a2a;--txt:#f4f1ea;--muted:#9a958c;--red:#d62b2b;--gold:#c9a24a;--green:#2fa84f;--amber:#e3a21a}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
@@ -40,6 +45,11 @@ table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:8px 6px;b
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}.kpi b{display:block;font-size:24px}
 dialog{background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:16px;max-width:420px;width:92vw}dialog input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#111;color:var(--txt);font-size:17px;margin:10px 0}
 .hide{display:none!important}
+.appcard{max-width:1100px;margin:12px auto 0;padding:0 16px}
+.appcard .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.appcard .line{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:15px}.appcard .line span{flex:1;min-width:200px}
+.appcard.ok .box{padding:8px 14px;border-color:#245c34}
+.logo{width:36px;height:36px;border-radius:8px}.count{background:var(--red);color:#fff;border-radius:999px;padding:2px 9px;font-size:14px;margin-left:6px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -52,11 +62,12 @@ dialog{background:var(--card);color:var(--txt);border:1px solid var(--line);bord
 
 <div id="app" class="hide">
   <header>
-    <h1>Commandes · Aroma</h1>
+    <img class="logo" src="/icon-192.png" alt=""><h1>Commandes <span id="pend" class="count hide">0</span></h1>
     <span class="pill" id="tgPill">Notifications…</span>
     <span class="pill" id="netPill">Connexion…</span>
     <button class="sec" id="pauseBtn">Pause</button>
   </header>
+  <section id="appCard" class="appcard"></section>
   <div class="tabs"><button class="on" data-tab="active">En cours</button><button data-tab="history">Historique</button></div>
   <main id="view"></main>
 </div>
@@ -114,11 +125,14 @@ async function load(){
   } catch(e){ if(e.message === "auth") return; $("#netPill").textContent = "Hors ligne !"; $("#netPill").className = "pill bad"; return; }
   if(!data.ok) return;
   const t = data.notif, err = t.lastError && Date.now() - t.lastError.ts < 3600000;
-  $("#tgPill").textContent = !t.resto ? "Notifications NON configurées" : err ? "Notification en échec !" : "Notifications OK";
-  $("#tgPill").className = "pill " + (t.resto && !err ? "ok" : "bad");
+  $("#tgPill").textContent = "Notification en échec !"; $("#tgPill").className = "pill bad" + (err ? "" : " hide");
   $("#pauseBtn").textContent = data.paused ? "Reprendre" : "Pause"; $("#pauseBtn").className = data.paused ? "ref" : "sec";
   for(const o of data.orders) if(!known.has(o.id)){ known.add(o.id); }
-  first = false; render(); updateAlarm();
+  first = false; render(); updateAlarm(); renderApp();
+  const n = data.orders.filter(o => o.status === "recue").length;
+  $("#pend").textContent = n; $("#pend").classList.toggle("hide", !n);
+  document.title = (n ? `(${n}) ` : "") + "Commandes — Aroma Gourmet";
+  try { n ? navigator.setAppBadge?.(n) : navigator.clearAppBadge?.(); } catch {}
 }
 
 function card(o){
@@ -206,6 +220,58 @@ document.addEventListener("click", async e => {
   load();
 });
 function alertBox(msg){ ask(`<p>${esc(msg)}</p><div class="row"><button value="ok" class="acc">OK</button></div>`); }
+
+/* ---------- App installable + notifications Web Push (iPhone et Android) ---------- */
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+let swReg = null, installEvt = null;
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; renderApp(); });
+if("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").then(r => { swReg = r; renderApp(); }).catch(() => {});
+const u8 = b64 => Uint8Array.from(atob(b64.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((b64.length + 3) % 4)), c => c.charCodeAt(0));
+function deviceLabel(){ const ua = navigator.userAgent; return (isIOS ? "iPhone/iPad" : /android/i.test(ua) ? "Android" : /mac/i.test(ua) ? "Mac" : /windows/i.test(ua) ? "Windows" : "Appareil") + (standalone() ? " (app)" : " (navigateur)"); }
+async function pushState(){
+  if(isIOS && !standalone()) return "install";
+  if(!("Notification" in window) || !("PushManager" in window) || !swReg) return "unsupported";
+  if(Notification.permission === "denied") return "denied";
+  return (await swReg.pushManager.getSubscription()) ? "on" : "off";
+}
+async function enablePush(){
+  try {
+    if(await Notification.requestPermission() !== "granted") return renderApp();
+    const k = await api("/api/admin/push-key"); if(!k.key) return alertBox("Notifications pas encore configurées sur le serveur.");
+    const sub = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(k.key) });
+    const j = await api("/api/admin/push-subscribe", { subscription: sub.toJSON(), label: deviceLabel() });
+    if(!j.ok) alertBox(j.message || "Échec de l'activation.");
+  } catch(e){ alertBox("Activation impossible : " + e.message); }
+  renderApp(); load();
+}
+let appBusy = false;
+async function renderApp(){
+  if(appBusy || !data) return; appBusy = true;
+  try {
+    const st = await pushState(), card = $("#appCard"), role = data.role, devs = data.devices || {};
+    const install = standalone() ? "" : isIOS
+      ? `<div class="line"><span>📲 <b>Installer l'app :</b> dans Safari, touchez le bouton Partager <b>⬆︎</b> puis « <b>Sur l'écran d'accueil</b> ». Ouvrez ensuite l'app depuis son icône.</span></div>`
+      : installEvt ? `<div class="line"><span>📲 Installez l'app sur cet appareil pour recevoir les commandes.</span><button class="acc" id="doInstall">Installer l'app</button></div>`
+      : `<div class="line"><span>📲 <b>Installer l'app :</b> menu du navigateur <b>⋮</b> → « Installer l'application » ou « Ajouter à l'écran d'accueil ».</span></div>`;
+    const notif = {
+      on: `<div class="line"><span>🔔 Notifications actives sur cet appareil.</span><button class="sec" id="doTest">Tester</button></div>`,
+      off: `<div class="line"><span>🔕 Notifications désactivées sur cet appareil.</span><button class="acc" id="doPush">Activer les notifications</button></div>`,
+      denied: `<div class="line"><span>⛔ Notifications bloquées. Réglages du téléphone → Notifications → Aroma Commandes → Autoriser.</span></div>`,
+      install: `<div class="line"><span>🔕 Sur iPhone, les notifications fonctionnent une fois l'app installée (ci-dessus).</span></div>`,
+      unsupported: `<div class="line"><span>⚠️ Ce navigateur ne gère pas les notifications. Utilisez Safari (iPhone) ou Chrome (Android).</span></div>` }[st];
+    const health = `<div class="line"><span>${data.reachable ? "🟢 Commandes en ligne <b>actives</b>" : "🔴 Commandes en ligne <b>suspendues</b> : aucun appareil du restaurant ne peut les recevoir"} · appareils du restaurant avec notifications : <b>${devs.resto || 0}</b>${role === "agence" ? ` · appareils Azure Muse : <b>${devs.agence || 0}</b>` : ""}</span></div>`;
+    const allGood = st === "on" && standalone() && data.reachable;
+    card.className = "appcard" + (allGood ? " ok" : "");
+    card.innerHTML = `<div class="box">${allGood ? `<div class="line"><span>🟢 App installée · notifications actives · commandes en ligne actives</span><button class="sec" id="doTest">Tester</button></div>` : install + notif + health}</div>`;
+  } finally { appBusy = false; }
+}
+document.addEventListener("click", async e => {
+  if(e.target.id === "doPush") return enablePush();
+  if(e.target.id === "doInstall" && installEvt){ installEvt.prompt(); installEvt = null; return renderApp(); }
+  if(e.target.id === "doTest"){ const j = await api("/api/admin/test-notification", { target: data.role === "agence" ? "agency" : "resto" });
+    alertBox(j.ok ? `Notification envoyée (${j.push || 0} appareil(s) en notification web${j.ntfy ? " + ntfy" : ""}). Verrouillez le téléphone pour vérifier le son.` : j.message); }
+});
 
 function start(){ show("app"); $("#soundBar").classList.toggle("hide", !!audio); load(); }
 setInterval(() => { if(!$("#app").classList.contains("hide") && tab === "active") load(); }, 8000);

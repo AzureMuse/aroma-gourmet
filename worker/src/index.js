@@ -5,6 +5,8 @@
 // Cron (chaque minute) : relances, expiration, nouvel envoi des notifications ratées, purge Loi 25.
 import { R } from "./restaurant.js";
 import ADMIN_HTML from "./admin.html";
+import { sendPush } from "./webpush.js";
+import { ICONS, MANIFEST, SW } from "./assets.js";
 
 const MIN = 60000, DAY = 86400000;
 const STATUS_FR = { recue:"Reçue", acceptee:"Acceptée", refusee:"Refusée", prete:"Prête",
@@ -157,6 +159,28 @@ async function ntfy(env, target, { title, message, priority = 5, tags = ["bell"]
 }
 const restoConfigured = async env => !!env.NTFY_TOPIC_RESTO || !!(await chatResto(env));
 
+// Web Push vers les appareils où l'app est installée (rôle resto ou agence). Renvoie le nombre d'appareils atteints.
+async function pushTo(env, role, data){
+  const { results } = await env.DB.prepare("SELECT * FROM push_subs WHERE role=?").bind(role).all();
+  let n = 0;
+  for(const s of results){
+    const r = await sendPush(env, { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, data);
+    if(r.ok){ n++; await env.DB.prepare("UPDATE push_subs SET last_ok=?, fails=0 WHERE id=?").bind(Date.now(), s.id).run(); }
+    else if(r.gone) await env.DB.prepare("DELETE FROM push_subs WHERE id=?").bind(s.id).run();
+    else { await env.DB.prepare("UPDATE push_subs SET fails=fails+1 WHERE id=?").bind(s.id).run(); await logEvent(env, "push_error", `${role} HTTP ${r.status} ${r.error || ""}`); }
+  }
+  return n;
+}
+const pendingCount = async env => (await env.DB.prepare("SELECT COUNT(*) n FROM orders WHERE status='recue'").first()).n;
+
+// Mode sécurisé : on n'accepte des commandes en ligne que si au moins un appareil du restaurant peut les recevoir
+// (app installée avec notifications actives, ou tableau de bord ouvert depuis moins de 3 minutes).
+async function restoReachable(env){
+  const subs = (await env.DB.prepare("SELECT COUNT(*) n FROM push_subs WHERE role='resto' AND fails<3").first()).n;
+  const seen = +(await getSetting(env, "seen_resto") || 0);
+  return subs > 0 || Date.now() - seen < 3 * MIN;
+}
+
 // Aucune donnée personnelle dans la notification : numéro, service, heure, articles, total.
 function orderMessage(o){
   const items = JSON.parse(o.items_json).map(l => `${l.qty} × ${l.name}`).join("\n");
@@ -177,10 +201,13 @@ function keyboard(o){
   return { inline_keyboard: [] };
 }
 async function notifyResto(env, o, { silent = false } = {}){
-  let ok = await ntfy(env, "resto", {
+  const nItems = JSON.parse(o.items_json).reduce((t, l) => t + l.qty, 0);
+  let ok = silent ? false : (await pushTo(env, "resto", { title: `${R.name} : ${o.preorder ? "nouvelle précommande" : "nouvelle commande"}`,
+    body: `${o.num} · ${nItems} article${nItems > 1 ? "s" : ""} · ${money(o.subtotal)} — touchez pour répondre`, tag: "cmd-" + o.id, url: "/admin", pending: await pendingCount(env) })) > 0;
+  ok = await ntfy(env, "resto", {
     title: `${R.name} : ${o.preorder ? "nouvelle précommande" : "nouvelle commande"}`,
     message: `${o.preorder ? "Une précommande attend votre confirmation." : "Une commande attend votre réponse."} Ouvrez le tableau de bord pour l'accepter ou la refuser.`,
-    priority: silent ? 2 : 5, tags: ["hamburger"] });
+    priority: silent ? 2 : 5, tags: ["hamburger"] }) || ok;
   const chat = await chatResto(env);
   if(chat){
     const r = await tg(env, "sendMessage", { chat_id: chat, text: orderMessage(o), reply_markup: keyboard(o), disable_notification: silent });
@@ -191,7 +218,9 @@ async function notifyResto(env, o, { silent = false } = {}){
   return ok;
 }
 async function remindResto(env, o){
-  let ok = await ntfy(env, "resto", { title: `${R.name} : RAPPEL`, message: `Une commande attend votre réponse depuis ${R.escalation.remindRestoMin} minutes. Ouvrez le tableau de bord.`, priority: 5, tags: ["warning"] });
+  let ok = (await pushTo(env, "resto", { title: `${R.name} : RAPPEL`, body: `La commande ${o.num} attend votre réponse depuis ${R.escalation.remindRestoMin} minutes.`,
+    tag: "cmd-" + o.id, url: "/admin", pending: await pendingCount(env) })) > 0;
+  ok = await ntfy(env, "resto", { title: `${R.name} : RAPPEL`, message: `Une commande attend votre réponse depuis ${R.escalation.remindRestoMin} minutes. Ouvrez le tableau de bord.`, priority: 5, tags: ["warning"] }) || ok;
   const chat = await chatResto(env);
   if(chat) ok = (await tg(env, "sendMessage", { chat_id: chat, text: `⏰ RAPPEL : la commande ${o.num} attend votre réponse depuis ${R.escalation.remindRestoMin} min.`, reply_to_message_id: o.tg_msg_id || undefined })).ok || ok;
   return ok;
@@ -201,7 +230,8 @@ async function refreshRestoMessage(env, o){
   if(chat && o.tg_msg_id) await tg(env, "editMessageText", { chat_id: chat, message_id: o.tg_msg_id, text: orderMessage(o), reply_markup: keyboard(o) });
 }
 async function notifyAgency(env, text){
-  let ok = await ntfy(env, "agency", { title: `Azure Muse : alerte ${R.name}`, message: text, priority: 4, tags: ["rotating_light"] });
+  let ok = (await pushTo(env, "agence", { title: `Azure Muse : alerte ${R.name}`, body: text, tag: "alerte", url: "/admin" })) > 0;
+  ok = await ntfy(env, "agency", { title: `Azure Muse : alerte ${R.name}`, message: text, priority: 4, tags: ["rotating_light"] }) || ok;
   const chat = await chatAgency(env);
   if(chat) ok = (await tg(env, "sendMessage", { chat_id: chat, text })).ok || ok;   // canal de secours indépendant de ntfy
   return ok;
@@ -309,6 +339,7 @@ async function verifyTurnstile(env, token, ip){
 
 async function createOrder(env, ctx, req){
   if(await getSetting(env, "paused") === "1") return fail("paused", `Le restaurant ne prend pas de commande en ligne pour le moment. Appelez le ${R.tel}.`, 503);
+  if(!(await restoReachable(env))) return fail("unreachable", `Le restaurant ne peut pas recevoir de commande en ligne pour le moment. Appelez le ${R.tel}.`, 503);
   let b; try { b = await req.json(); } catch { return fail("bad_json", "Requête invalide."); }
   const now = Date.now(), ip = req.headers.get("cf-connecting-ip");
 
@@ -408,6 +439,8 @@ async function adminRoutes(env, ctx, req, url){
   }
 
   if(p === "/api/admin/orders" && req.method === "GET"){
+    const seenKey = "seen_" + role, lastSeen = +(await getSetting(env, seenKey) || 0);
+    if(Date.now() - lastSeen > 60000) await setSetting(env, seenKey, Date.now());
     const scope = url.searchParams.get("scope") || "active";
     const now = Date.now();
     const q = scope === "active"
@@ -419,6 +452,8 @@ async function adminRoutes(env, ctx, req, url){
       o.absences = a.n; o.blocked = !!a.b;
     }
     return json({ ok:true, role, paused: await getSetting(env, "paused") === "1", now,
+      reachable: await restoReachable(env),
+      devices: Object.fromEntries((await env.DB.prepare("SELECT role, COUNT(*) n FROM push_subs WHERE fails<3 GROUP BY role").all()).results.map(r => [r.role, r.n])),
       notif: { resto: await restoConfigured(env), agency: !!env.NTFY_TOPIC_AGENCY || !!(await chatAgency(env)),
                lastError: (await env.DB.prepare("SELECT ts, detail FROM events WHERE kind IN ('ntfy_error','tg_error') AND ts>? ORDER BY ts DESC LIMIT 1").bind(now - DAY).first()) || null },
       orders: results.map(o => ({ ...o, items: JSON.parse(o.items_json), items_json: undefined, ip_hash: undefined, device_id: undefined, user_agent: undefined, fbp: undefined, fbc: undefined, token: undefined, idem: undefined })) });
@@ -452,6 +487,22 @@ async function adminRoutes(env, ctx, req, url){
       FROM orders WHERE created_at>? GROUP BY source, status`).bind(since).all();
     return json({ ok:true, days, rows: by.results });
   }
+  if(p === "/api/admin/push-key" && req.method === "GET") return json({ ok: !!env.VAPID_PUBLIC, key: env.VAPID_PUBLIC || null });
+  if(p === "/api/admin/push-subscribe" && req.method === "POST"){
+    let b; try { b = await req.json(); } catch { b = {}; }
+    const s = b.subscription || {};
+    if(!/^https:\/\//.test(s.endpoint || "") || !s.keys?.p256dh || !s.keys?.auth) return fail("sub", "Abonnement invalide.");
+    await env.DB.prepare(`INSERT INTO push_subs(role, endpoint, p256dh, auth, label, created_at, fails) VALUES(?,?,?,?,?,?,0)
+      ON CONFLICT(endpoint) DO UPDATE SET role=excluded.role, p256dh=excluded.p256dh, auth=excluded.auth, label=excluded.label, fails=0`)
+      .bind(role, s.endpoint, s.keys.p256dh, s.keys.auth, clean(b.label, 80), Date.now()).run();
+    await logEvent(env, "push_subscribe", `${role} ${clean(b.label, 80)}`);
+    return json({ ok: true });
+  }
+  if(p === "/api/admin/push-unsubscribe" && req.method === "POST"){
+    let b; try { b = await req.json(); } catch { b = {}; }
+    await env.DB.prepare("DELETE FROM push_subs WHERE endpoint=?").bind(String(b.endpoint || "")).run();
+    return json({ ok: true });
+  }
   if(p === "/api/admin/telegram-setup" && req.method === "POST"){
     if(role !== "agence") return fail("role", "Réservé à Azure Muse.", 403);
     if(!env.TG_BOT_TOKEN || !env.TG_WEBHOOK_SECRET) return fail("tg", "Secrets Telegram manquants dans Cloudflare.");
@@ -464,10 +515,11 @@ async function adminRoutes(env, ctx, req, url){
     let b; try { b = await req.json(); } catch { b = {}; }
     const target = b.target === "agency" ? "agency" : "resto";
     const text = "Test de notification. Si vous l'entendez téléphone verrouillé, tout fonctionne.";
+    const viaPush = await pushTo(env, target === "agency" ? "agence" : "resto", { title: `${R.name} : test`, body: text, tag: "test", url: "/admin" });
     const viaNtfy = await ntfy(env, target, { title: `${R.name} : test`, message: text, priority: 5 });
     const chat = target === "agency" ? await chatAgency(env) : await chatResto(env);
     const viaTg = chat ? (await tg(env, "sendMessage", { chat_id: chat, text: "🔔 " + text })).ok : null;
-    return (viaNtfy || viaTg) ? json({ ok:true, ntfy: viaNtfy, telegram: viaTg }) : fail("notif", "Échec sur tous les canaux (voir le journal).", 502);
+    return (viaPush || viaNtfy || viaTg) ? json({ ok:true, push: viaPush, ntfy: viaNtfy, telegram: viaTg }) : fail("notif", "Échec sur tous les canaux (voir le journal).", 502);
   }
   return fail("not_found", "Introuvable.", 404);
 }
@@ -536,6 +588,13 @@ async function cron(env){
       await refreshRestoMessage(env, upd);
     }
   }
+  // Mode sécurisé : les commandes sont suspendues automatiquement (restoReachable) ; Azure Muse est prévenue une fois par jour.
+  if(isOpenAt(now) && await getSetting(env, "paused") !== "1" && !(await restoReachable(env))){
+    const d = mtl(now).date;
+    if(await getSetting(env, "unreach_alert") !== d &&
+       await notifyAgency(env, `${R.name} : aucun appareil du restaurant ne peut recevoir les commandes. Commandes en ligne suspendues automatiquement (la page affiche « Appeler »).`))
+      await setSetting(env, "unreach_alert", d);
+  }
   // Purge Loi 25 : une fois par jour.
   const today = mtl(now).date;
   if(await getSetting(env, "last_purge") !== today){
@@ -559,6 +618,10 @@ export default {
   async fetch(req, env, ctx){
     const url = new URL(req.url), p = url.pathname;
     try {
+      if(p === "/manifest.webmanifest") return new Response(MANIFEST, { headers: { "content-type": "application/manifest+json", "cache-control": "public, max-age=3600" } });
+      if(p === "/sw.js") return new Response(SW, { headers: { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache", "service-worker-allowed": "/" } });
+      const icon = { "/icon-192.png": 192, "/icon-512.png": 512, "/apple-touch-icon.png": 180 }[p];
+      if(icon) return new Response(Uint8Array.from(atob(ICONS[icon]), c => c.charCodeAt(0)), { headers: { "content-type": "image/png", "cache-control": "public, max-age=86400" } });
       if(p === "/" || p === "/admin") return new Response(ADMIN_HTML, { headers: { "content-type":"text/html; charset=utf-8", "cache-control":"no-store", ...SEC_HEADERS } });
       if(p === "/api/tg" && req.method === "POST") return await telegramWebhook(env, ctx, req);
       if(p.startsWith("/api/admin/")) return await adminRoutes(env, ctx, req, url);
@@ -572,7 +635,7 @@ export default {
       } else if(p.startsWith("/api/track/") && req.method === "GET") res = await trackOrder(env, p.slice(11));
       else if(p === "/api/status" && req.method === "GET"){
         const paused = await getSetting(env, "paused") === "1";
-        res = json({ ok:true, accepting: !paused && await restoConfigured(env), paused, openNow: isOpenAt(Date.now()) });
+        res = json({ ok:true, accepting: !paused && await restoReachable(env), paused, openNow: isOpenAt(Date.now()) });
       } else res = fail("not_found", "Introuvable.", 404);
       for(const [k, v] of Object.entries(cors)) res.headers.set(k, v);
       return res;

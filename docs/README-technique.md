@@ -21,6 +21,14 @@ Tout est gratuit dans les quotas Cloudflare (Workers Free : 100 000 requêtes/jo
 
 **Limite ntfy.sh gratuit :** 250 messages/jour et 60 envois d'un coup puis 1 toutes les 5 s, comptés **par adresse IP**. Les serveurs Cloudflare partagent leurs IP : si la limite est atteinte (HTTP 429), l'échec est noté, le tableau de bord affiche « Notification en échec ! », la cron renvoie l'alerte et Azure Muse est prévenue. Si ça se produit souvent : forfait ntfy payant (jeton `NTFY_TOKEN`) ou Telegram (déjà codé, voir section 5), avec l'accord de Souad.
 
+## 1 bis. App restaurateur (PWA) et notifications
+- `/admin` est une app installable (iPhone : Safari → Partager → « Sur l'écran d'accueil » ; Android : « Installer l'application »).
+- **Web Push** (VAPID + chiffrement RFC 8291, `worker/src/webpush.js`) vers chaque appareil abonné, par rôle (`resto`, `agence`). Gratuit, aucun compte tiers. Secrets : `VAPID_PRIVATE_JWK` (secret) et `VAPID_PUBLIC` (variable).
+- Canaux : Web Push (principal) + ntfy (complément) + Telegram (facultatif, code conservé) + son du tableau de bord ouvert.
+- **iPhone : le son des notifications web n'est pas garanti** (limite d'iOS) → garder ntfy et/ou une tablette au comptoir avec le tableau de bord ouvert.
+- **Mode sécurisé** : les commandes en ligne ne sont acceptées que si un appareil du resto est joignable (abonnement Web Push valide ou tableau de bord ouvert depuis < 3 min). Sinon la page affiche « Appeler » et Azure Muse est alertée (une fois par jour, heures d'ouverture).
+- Alertes Azure Muse : Web Push sur les appareils « agence » + ntfy. Courriel : possible avec Cloudflare Email Routing seulement si le domaine d'envoi utilise les DNS Cloudflare (non activé pour ne pas toucher au courrier d'azuremuse.ca).
+
 ## 2. Ce que le serveur contrôle (rien n'est fait confiance au navigateur)
 - **Turnstile** validé côté serveur (`siteverify`) ; aucune clé secrète dans GitHub.
 - **Prix et promotions** recalculés depuis `worker/src/menu.json` ; le trio 13,99 $ n'est accepté que pour un retrait dans son créneau.
