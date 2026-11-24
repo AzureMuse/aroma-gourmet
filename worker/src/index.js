@@ -136,6 +136,8 @@ const chatAgency = env => getSetting(env, "tg_agency");
 async function ntfy(env, target, { title, message, priority = 5, tags = ["bell"] }){
   const topic = target === "resto" ? env.NTFY_TOPIC_RESTO : env.NTFY_TOPIC_AGENCY;
   if(!topic) return false;
+  const until = +(await getSetting(env, "ntfy_pause_until") || 0);
+  if(Date.now() < until) return false;                 // ntfy a demandé d'attendre : Telegram prend le relais
   const body = { topic, title, message, priority, tags };
   if(env.DASHBOARD_URL){ body.click = env.DASHBOARD_URL; body.actions = [{ action: "view", label: "Ouvrir le tableau de bord", url: env.DASHBOARD_URL, clear: true }]; }
   if(env.NTFY_FAKE === "1"){ await logEvent(env, "ntfy_fake", target + " " + JSON.stringify(body)); return true; }
@@ -144,6 +146,11 @@ async function ntfy(env, target, { title, message, priority = 5, tags = ["bell"]
     if(env.NTFY_TOKEN) headers.authorization = "Bearer " + env.NTFY_TOKEN;
     const r = await fetch((env.NTFY_SERVER || "https://ntfy.sh").replace(/\/$/, ""), { method: "POST", headers, body: JSON.stringify(body) });
     if(r.ok) return true;
+    if(r.status === 429){
+      const ra = parseInt(r.headers.get("retry-after") || "", 10);
+      const wait = Number.isFinite(ra) && ra > 0 ? Math.min(ra, 3600) : 300;   // par défaut 5 min
+      await setSetting(env, "ntfy_pause_until", Date.now() + wait * 1000);
+    }
     await logEvent(env, "ntfy_error", `${target} HTTP ${r.status}${r.status === 429 ? " (limite ntfy atteinte)" : ""}`);
   } catch(e){ await logEvent(env, "ntfy_error", `${target} ${e}`); }
   return false;
@@ -445,11 +452,22 @@ async function adminRoutes(env, ctx, req, url){
       FROM orders WHERE created_at>? GROUP BY source, status`).bind(since).all();
     return json({ ok:true, days, rows: by.results });
   }
+  if(p === "/api/admin/telegram-setup" && req.method === "POST"){
+    if(role !== "agence") return fail("role", "Réservé à Azure Muse.", 403);
+    if(!env.TG_BOT_TOKEN || !env.TG_WEBHOOK_SECRET) return fail("tg", "Secrets Telegram manquants dans Cloudflare.");
+    const me = await tg(env, "getMe", {});
+    const hook = await tg(env, "setWebhook", { url: url.origin + "/api/tg", secret_token: env.TG_WEBHOOK_SECRET, allowed_updates: ["message", "callback_query"], drop_pending_updates: true });
+    return json({ ok: !!(me.ok && hook.ok), bot: me.result?.username || null, webhook: hook.ok, error: me.description || hook.description || null,
+                  linked: { resto: !!(await chatResto(env)), agency: !!(await chatAgency(env)) } });
+  }
   if(p === "/api/admin/test-notification" && req.method === "POST"){
     let b; try { b = await req.json(); } catch { b = {}; }
     const target = b.target === "agency" ? "agency" : "resto";
-    const ok = await ntfy(env, target, { title: `${R.name} : test`, message: "Test de notification. Si vous l'entendez téléphone verrouillé, tout fonctionne.", priority: 5 });
-    return ok ? json({ ok:true }) : fail("ntfy", "Échec de l'envoi ntfy (voir le journal). Vérifiez le canal configuré dans Cloudflare.", 502);
+    const text = "Test de notification. Si vous l'entendez téléphone verrouillé, tout fonctionne.";
+    const viaNtfy = await ntfy(env, target, { title: `${R.name} : test`, message: text, priority: 5 });
+    const chat = target === "agency" ? await chatAgency(env) : await chatResto(env);
+    const viaTg = chat ? (await tg(env, "sendMessage", { chat_id: chat, text: "🔔 " + text })).ok : null;
+    return (viaNtfy || viaTg) ? json({ ok:true, ntfy: viaNtfy, telegram: viaTg }) : fail("notif", "Échec sur tous les canaux (voir le journal).", 502);
   }
   return fail("not_found", "Introuvable.", 404);
 }
