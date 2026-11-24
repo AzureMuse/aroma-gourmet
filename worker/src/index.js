@@ -220,11 +220,6 @@ async function applyAction(env, ctx, id, action, opts = {}){
   const updated = await env.DB.prepare("SELECT * FROM orders WHERE id=?").bind(id).first();
   ctx.waitUntil(refreshRestoMessage(env, updated));
   if(action === "accept") ctx.waitUntil(metaEvent(env, updated, "Purchase", "purchase-" + updated.num));
-  if(action === "noshow" && updated.phone){
-    const c = await env.DB.prepare("SELECT COUNT(*) n FROM orders WHERE phone=? AND status='absente'").bind(updated.phone).first();
-    if(c.n >= R.limits.noShowsBeforeBlock)
-      await env.DB.prepare("INSERT OR IGNORE INTO blocked_phones(phone,reason,created_at) VALUES(?,?,?)").bind(updated.phone, `${c.n} absences`, now).run();
-  }
   return { order: updated };
 }
 
@@ -377,6 +372,10 @@ async function adminRoutes(env, ctx, req, url){
       ? env.DB.prepare("SELECT * FROM orders WHERE status IN ('recue','acceptee','prete','expiree') OR (closed_at>?) ORDER BY created_at DESC LIMIT 200").bind(now - 3 * 3600000)
       : env.DB.prepare("SELECT * FROM orders WHERE created_at>? ORDER BY created_at DESC LIMIT 500").bind(now - Math.min(+url.searchParams.get("days") || 7, 90) * DAY);
     const { results } = await q.all();
+    for(const o of results) if(o.phone){
+      const a = await env.DB.prepare("SELECT (SELECT COUNT(*) FROM orders WHERE phone=? AND status='absente') n, EXISTS(SELECT 1 FROM blocked_phones WHERE phone=?) b").bind(o.phone, o.phone).first();
+      o.absences = a.n; o.blocked = !!a.b;
+    }
     return json({ ok:true, role, paused: await getSetting(env, "paused") === "1", now,
       telegram: { resto: !!(await chatResto(env)), agency: !!(await chatAgency(env)) },
       orders: results.map(o => ({ ...o, items: JSON.parse(o.items_json), items_json: undefined, ip_hash: undefined, device_id: undefined, user_agent: undefined, fbp: undefined, fbc: undefined, token: undefined, idem: undefined })) });
@@ -386,6 +385,16 @@ async function adminRoutes(env, ctx, req, url){
     let b; try { b = await req.json(); } catch { b = {}; }
     const r = await applyAction(env, ctx, +m[1], m[2], b);
     return r.error ? fail("action", r.error, 409) : json({ ok:true, status: r.order.status });
+  }
+  // Blocage d'un numéro : décidé à la main par le restaurant (jamais automatique).
+  const bl = /^\/api\/admin\/orders\/(\d+)\/(block|unblock)$/.exec(p);
+  if(bl && req.method === "POST"){
+    const o = await env.DB.prepare("SELECT phone FROM orders WHERE id=?").bind(+bl[1]).first();
+    if(!o?.phone) return fail("action", "Numéro introuvable.", 404);
+    if(bl[2] === "block") await env.DB.prepare("INSERT OR IGNORE INTO blocked_phones(phone,reason,created_at) VALUES(?,?,?)").bind(o.phone, `bloqué par ${role}`, Date.now()).run();
+    else await env.DB.prepare("DELETE FROM blocked_phones WHERE phone=?").bind(o.phone).run();
+    await logEvent(env, bl[2], `${role} …${o.phone.slice(-4)}`);
+    return json({ ok:true });
   }
   if(p === "/api/admin/pause" && req.method === "POST"){
     let b; try { b = await req.json(); } catch { b = {}; }
@@ -417,17 +426,19 @@ async function telegramWebhook(env, ctx, req){
   const resto = await chatResto(env), agency = await chatAgency(env);
 
   if(u.message?.text?.startsWith("/start")){
-    const code = u.message.text.split(/\s+/)[1] || "", chat = String(u.message.chat.id);
-    if(env.TG_LINK_RESTO && safeEq(code, env.TG_LINK_RESTO)){ await setSetting(env, "tg_resto", chat);
+    const code = u.message.text.split(/\s+/)[1] || "", chat = String(u.message.chat.id), from = String(u.message.from?.id || "");
+    const addUser = async () => { const l = JSON.parse(await getSetting(env, "tg_users") || "[]"); if(from && !l.includes(from)){ l.push(from); await setSetting(env, "tg_users", JSON.stringify(l)); } };
+    if(env.TG_LINK_RESTO && safeEq(code, env.TG_LINK_RESTO)){ await setSetting(env, "tg_resto", chat); await addUser();
       await tg(env, "sendMessage", { chat_id: chat, text: `✅ Ce téléphone recevra les commandes en ligne de ${R.name}.\nGardez la sonnerie activée et les notifications Telegram autorisées.` }); }
-    else if(env.TG_LINK_AGENCY && safeEq(code, env.TG_LINK_AGENCY)){ await setSetting(env, "tg_agency", chat);
+    else if(env.TG_LINK_AGENCY && safeEq(code, env.TG_LINK_AGENCY)){ await setSetting(env, "tg_agency", chat); await addUser();
       await tg(env, "sendMessage", { chat_id: chat, text: `✅ Azure Muse recevra les alertes de ${R.name} (commandes non confirmées, pannes).` }); }
     return new Response("ok");
   }
   const cq = u.callback_query;
   if(cq){
     const chat = String(cq.message?.chat?.id || "");
-    if(chat !== resto && chat !== agency){ await tg(env, "answerCallbackQuery", { callback_query_id: cq.id, text: "Non autorisé." }); return new Response("ok"); }
+    const users = JSON.parse(await getSetting(env, "tg_users") || "[]");
+    if((chat !== resto && chat !== agency) || !users.includes(String(cq.from?.id || ""))){ await tg(env, "answerCallbackQuery", { callback_query_id: cq.id, text: "Non autorisé." }); return new Response("ok"); }
     const [k, id, extra] = String(cq.data || "").split(":");
     if(k === "r"){   // choix du motif de refus
       await tg(env, "editMessageReplyMarkup", { chat_id: chat, message_id: cq.message.message_id, reply_markup: { inline_keyboard: [

@@ -139,6 +139,8 @@ function card(o){
     <div class="when">${esc(o.mode)} · ${esc(o.slot_label)}${eta}</div>
     <div class="meta">${esc(o.name || "—")} · ${o.phone ? `<a style="color:var(--gold)" href="tel:+1${esc(o.phone)}">${esc(o.phone.replace(/(\d{3})(\d{3})(\d{4})/, "$1 $2-$3"))}</a>` : "—"} · reçue à ${created}</div>
     <ul>${items}</ul>
+    ${o.blocked ? `<div class="note" style="border-color:var(--red)">⛔ Numéro bloqué <button class="sec" data-a="unblock" data-id="${o.id}">Débloquer</button></div>`
+      : o.absences >= 2 ? `<div class="note" style="border-color:var(--red)">⚠️ Ce numéro n'est pas venu ${o.absences} fois. <button class="ref" data-a="block" data-id="${o.id}">Bloquer ce numéro</button></div>` : ""}
     ${o.note ? `<div class="note">📝 ${esc(o.note)}</div>` : ""}
     <div class="top"><span class="meta">Sous-total (avant taxes)</span><b>${money(o.subtotal)}</b></div>
     ${o.refuse_reason ? `<div class="meta">Motif : ${esc(o.refuse_reason)}</div>` : ""}
@@ -195,7 +197,8 @@ document.addEventListener("click", async e => {
       <div class="row"><button value="cancel" class="sec">Annuler</button><button value="ok" class="acc">Valider</button></div>`);
     if(v !== "ok") return; body.paid = parseFloat(($("#paid").value || "").replace(",", "."));
   }
-  if(a === "noshow"){ const v = await ask(`<p>Le client n'est pas venu ? Après 2 absences, son numéro est bloqué.</p><div class="row"><button value="no" class="sec">Non</button><button value="yes" class="ref">Confirmer</button></div>`); if(v !== "yes") return; }
+  if(a === "block"){ const v = await ask(`<p>Bloquer ce numéro ? Il ne pourra plus commander en ligne (il pourra toujours appeler).</p><div class="row"><button value="no" class="sec">Non</button><button value="yes" class="ref">Bloquer</button></div>`); if(v !== "yes") return; }
+  if(a === "noshow"){ const v = await ask(`<p>Le client n'est pas venu ? Après 2 absences, vous pourrez décider de bloquer son numéro.</p><div class="row"><button value="no" class="sec">Non</button><button value="yes" class="ref">Confirmer</button></div>`); if(v !== "yes") return; }
   b.disabled = true;
   const j = await api(`/api/admin/orders/${id}/${a}`, body);
   if(!j.ok) alertBox(j.message);

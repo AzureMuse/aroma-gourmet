@@ -24,7 +24,7 @@ Tout est gratuit dans les quotas Cloudflare (Workers Free : 100 000 requêtes/jo
 - **Prix et promotions** recalculés depuis `worker/src/menu.json` ; le trio 13,99 $ n'est accepté que pour un retrait dans son créneau.
 - **Horaires** à l'heure de Montréal, jours fermés (`closedDates`), délai minimum, précommande ≤ 7 jours.
 - **Anti-doublon** (clé `idem`), **numéro unique** `A-1234`, **jeton de suivi** secret pour le client.
-- **Limites** : 4 commandes/jour et 2 en attente par numéro, 4/jour par appareil, 6/heure par IP (hachée), blocage d'un numéro après 2 absences.
+- **Limites** : 4 commandes/jour et 2 en attente par numéro, 4/jour par appareil, 6/heure par IP (hachée), alerte après 2 absences, blocage du numéro décidé par le resto.
 - **Repli automatique** : si le Worker est en panne, en pause, ou si le téléphone du resto n'est pas relié à Telegram, la page publique repasse seule en « menu + Appeler ».
 
 ## 3. Statuts
@@ -73,7 +73,7 @@ Environnement de test séparé : `npx wrangler deploy --env test` (base `-test`,
 1. **Notification non reçue** : le tableau de bord sonne aussi (laisser la tablette ouverte, « Activer le son »). Rappel automatique à 5 min, alerte Azure Muse à 8 min.
 2. **Telegram en panne / téléphone perdu** : bouton **Pause** du tableau de bord → la page affiche « Appeler pour commander ». Relier un autre téléphone avec le lien de liaison.
 3. **Worker en panne** : la page repasse automatiquement en mode menu + appel. Sinon : `ordersEnabled: false` dans `index.html`.
-4. **Fausses commandes** : bouton « Client absent » (blocage auto après 2), ou baisser les limites dans `restaurant.js`.
+4. **Fausses commandes** : bouton « Client absent », puis « Bloquer ce numéro » (décision du resto), ou baisser les limites dans `restaurant.js`.
 
 ## 8. Loi 25 (à valider par Azure Muse — pas un avis juridique)
 - Données minimales : nom, téléphone, note. Aucune donnée de paiement.

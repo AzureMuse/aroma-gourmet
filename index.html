@@ -7,6 +7,10 @@
 <script>
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
+// Loi 25 : aucun témoin publicitaire tant que le visiteur n'a pas accepté (mode consentement Google).
+var agC = null; try { agC = JSON.parse(localStorage.getItem('ag_consent')); } catch(e){}
+var agG = agC === 'oui' ? 'granted' : 'denied';
+gtag('consent', 'default', { ad_storage: agG, ad_user_data: agG, ad_personalization: agG, analytics_storage: agG });
 gtag('js', new Date());
 gtag('config', 'AW-18565631152');
 </script>
@@ -303,7 +307,7 @@ function track(event, key, params){
   Le restaurant ne livre pas lui-même&nbsp;; la livraison passe par Uber Eats, aux prix de la plateforme.
   Le paiement se fait au comptoir, à l'arrivée.
   <div class="halal">Tous nos produits sont halal.</div>
-  <div class="halal"><b>Confidentialité.</b> Le nom et le numéro de téléphone saisis servent uniquement à préparer votre commande et à vous joindre à son sujet&nbsp;; ils ne sont ni vendus ni utilisés à des fins publicitaires. Ils sont conservés 90 jours, puis effacés automatiquement&nbsp;; seuls le restaurant et Azure Muse, son prestataire, y ont accès. Les commandes sont hébergées chez Cloudflare, en Amérique du Nord, et protégées par une vérification anti-robot. Cette page utilise la balise Google pour mesurer l'efficacité de nos publicités, et les témoins Meta seulement si vous l'acceptez. Pour toute question ou demande d'accès ou de suppression de vos renseignements (Loi 25), appelez le restaurant au 438 531-6482.</div>
+  <div class="halal"><b>Confidentialité.</b> Le nom et le numéro de téléphone saisis servent uniquement à préparer votre commande et à vous joindre à son sujet&nbsp;; ils ne sont ni vendus ni utilisés à des fins publicitaires. Ils sont conservés 90 jours, puis effacés automatiquement&nbsp;; seuls le restaurant et Azure Muse, son prestataire, y ont accès. Les commandes sont hébergées chez Cloudflare, en Amérique du Nord, et protégées par une vérification anti-robot. Les témoins publicitaires (Google, Meta) ne sont utilisés que si vous l'acceptez. Pour toute question ou demande d'accès ou de suppression de vos renseignements (Loi 25), appelez le restaurant au 438 531-6482.</div>
 </footer>
 
 <div class="bar" id="bar" hidden>
@@ -803,16 +807,16 @@ function loadPixel(){
   fbq("init", CONFIG.metaPixelId); fbq("track", "PageView");
 }
 function consentBanner(){
-  if(!CONFIG.metaPixelId) return;
   if(consentGiven()) return loadPixel();
   if(store.get("ag_consent") === "non") return;
   const d = document.createElement("div");
   d.setAttribute("role", "region"); d.setAttribute("aria-label", "Mesure publicitaire");
   d.style.cssText = "position:fixed;left:12px;right:12px;bottom:12px;z-index:60;background:#111;color:#f4f1ea;border:1px solid #333;border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.4;box-shadow:0 8px 30px rgba(0,0,0,.5)";
-  d.innerHTML = 'Acceptez-vous que nous mesurions l\'efficacité de nos publicités Facebook et Instagram (témoins Meta)&nbsp;? Facultatif.' +
+  d.innerHTML = 'Acceptez-vous que nous mesurions l\'efficacité de nos publicités (témoins Google, Facebook et Instagram)&nbsp;? C\'est facultatif et ne change rien à votre commande.' +
     '<div style="display:flex;gap:8px;margin-top:10px"><button type="button" data-c="non" style="flex:1;padding:10px;border-radius:10px;border:1px solid #444;background:#222;color:#fff">Refuser</button>' +
     '<button type="button" data-c="oui" style="flex:1;padding:10px;border-radius:10px;border:0;background:#c8102e;color:#fff;font-weight:700">J\'accepte</button></div>';
-  d.addEventListener("click", e => { const c = e.target.dataset.c; if(!c) return; store.set("ag_consent", c); d.remove(); if(c === "oui") loadPixel(); });
+  d.addEventListener("click", e => { const c = e.target.dataset.c; if(!c) return; store.set("ag_consent", c); d.remove();
+    if(c === "oui"){ const g = "granted"; try { gtag("consent", "update", { ad_storage: g, ad_user_data: g, ad_personalization: g, analytics_storage: g }); } catch(e){} loadPixel(); } });
   document.body.appendChild(d);
 }
 

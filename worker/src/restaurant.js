@@ -27,7 +27,7 @@ export const R = {
   limits: {
     maxQtyPerLine: 20, maxItems: 40, maxSubtotal: 400,
     phonePerDay: 4, phonePending: 2, devicePerDay: 4, ipPerHour: 6,
-    noShowsBeforeBlock: 2
+    noShowsWarning: 2   // alerte « à bloquer ? » dans le tableau de bord ; le blocage reste manuel
   },
 
   // Relances quand une commande n'est pas acceptée (minutes après l'ouverture / la réception).
