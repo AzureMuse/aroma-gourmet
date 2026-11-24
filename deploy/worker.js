@@ -775,9 +775,10 @@ async function notifyResto(env, o, { silent = false } = {}) {
 }
 __name(notifyResto, "notifyResto");
 async function remindResto(env, o) {
-  await ntfy(env, "resto", { title: `${R.name} : RAPPEL`, message: `Une commande attend votre r\xE9ponse depuis ${R.escalation.remindRestoMin} minutes. Ouvrez le tableau de bord.`, priority: 5, tags: ["warning"] });
+  let ok = await ntfy(env, "resto", { title: `${R.name} : RAPPEL`, message: `Une commande attend votre r\xE9ponse depuis ${R.escalation.remindRestoMin} minutes. Ouvrez le tableau de bord.`, priority: 5, tags: ["warning"] });
   const chat = await chatResto(env);
-  if (chat) await tg(env, "sendMessage", { chat_id: chat, text: `\u23F0 RAPPEL : la commande ${o.num} attend votre r\xE9ponse depuis ${R.escalation.remindRestoMin} min.`, reply_to_message_id: o.tg_msg_id || void 0 });
+  if (chat) ok = (await tg(env, "sendMessage", { chat_id: chat, text: `\u23F0 RAPPEL : la commande ${o.num} attend votre r\xE9ponse depuis ${R.escalation.remindRestoMin} min.`, reply_to_message_id: o.tg_msg_id || void 0 })).ok || ok;
+  return ok;
 }
 __name(remindResto, "remindResto");
 async function refreshRestoMessage(env, o) {
@@ -786,9 +787,10 @@ async function refreshRestoMessage(env, o) {
 }
 __name(refreshRestoMessage, "refreshRestoMessage");
 async function notifyAgency(env, text) {
-  await ntfy(env, "agency", { title: `Azure Muse : alerte ${R.name}`, message: text, priority: 4, tags: ["rotating_light"] });
+  let ok = await ntfy(env, "agency", { title: `Azure Muse : alerte ${R.name}`, message: text, priority: 4, tags: ["rotating_light"] });
   const chat = await chatAgency(env);
-  if (chat) await tg(env, "sendMessage", { chat_id: chat, text });
+  if (chat) ok = (await tg(env, "sendMessage", { chat_id: chat, text })).ok || ok;
+  return ok;
 }
 __name(notifyAgency, "notifyAgency");
 async function metaEvent(env, o, eventName, eventId, sourceUrl) {
@@ -1196,16 +1198,17 @@ async function cron(env) {
     const age = now - o.notify_from;
     if (o.alert_level === 0) {
       if (await notifyResto(env, o)) await env.DB.prepare("UPDATE orders SET alert_level=1 WHERE id=?").bind(o.id).run();
-      else if (age >= E.alertAgencyMin * MIN) {
-        await notifyAgency(env, `${R.name} : la notification de la commande ${o.num} n'a pas pu \xEAtre envoy\xE9e au restaurant. Appelez le resto : ${R.tel}.`);
+      else if (age >= E.alertAgencyMin * MIN && !await getSetting(env, "agency_warned_" + o.id) && await notifyAgency(env, `${R.name} : la notification de la commande ${o.num} n'a pas pu \xEAtre envoy\xE9e au restaurant. Appelez le resto : ${R.tel}.`))
+        await setSetting(env, "agency_warned_" + o.id, "1");
+    } else {
+      let lvl = o.alert_level;
+      if (lvl === 1 && age >= E.remindRestoMin * MIN && await remindResto(env, o)) {
+        lvl = 2;
+        await env.DB.prepare("UPDATE orders SET alert_level=2 WHERE id=?").bind(o.id).run();
+      }
+      if ((lvl === 1 || lvl === 2) && age >= E.alertAgencyMin * MIN && await notifyAgency(env, `${R.name} : la commande ${o.num} n'est pas confirm\xE9e depuis ${Math.round(age / MIN)} min. Appelez le resto : ${R.tel}.`)) {
         await env.DB.prepare("UPDATE orders SET alert_level=3 WHERE id=?").bind(o.id).run();
       }
-    } else if (o.alert_level === 1 && age >= E.remindRestoMin * MIN) {
-      await remindResto(env, o);
-      await env.DB.prepare("UPDATE orders SET alert_level=2 WHERE id=?").bind(o.id).run();
-    } else if (o.alert_level === 2 && age >= E.alertAgencyMin * MIN) {
-      await notifyAgency(env, `${R.name} : la commande ${o.num} n'est pas confirm\xE9e depuis ${E.alertAgencyMin} min. Appelez le resto : ${R.tel}.`);
-      await env.DB.prepare("UPDATE orders SET alert_level=3 WHERE id=?").bind(o.id).run();
     }
     if (o.alert_level >= 1 && age >= E.expireMin * MIN) {
       await env.DB.prepare("UPDATE orders SET status='expiree' WHERE id=? AND status='recue'").bind(o.id).run();
