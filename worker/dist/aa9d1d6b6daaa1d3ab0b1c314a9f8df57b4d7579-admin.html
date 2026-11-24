@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0d0d0d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Commandes — Aroma Gourmet</title>
+<style>
+:root{--bg:#0d0d0d;--card:#181818;--line:#2a2a2a;--txt:#f4f1ea;--muted:#9a958c;--red:#d62b2b;--gold:#c9a24a;--green:#2fa84f;--amber:#e3a21a}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:12px 14px;font-weight:700}
+header{position:sticky;top:0;z-index:5;background:rgba(13,13,13,.96);border-bottom:1px solid var(--line);padding:12px 16px calc(12px) ;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;flex:1;color:var(--gold);letter-spacing:.3px}
+.pill{font-size:13px;padding:6px 10px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--muted)}
+.pill.ok{color:#bfe8c9;border-color:#245c34}.pill.bad{color:#ffc9c9;border-color:#7a2323}
+.tabs{display:flex;gap:8px;padding:12px 16px 0}.tabs button{background:var(--card);color:var(--muted);flex:1}.tabs button.on{background:var(--red);color:#fff}
+main{padding:12px 16px 120px;max-width:1100px;margin:0 auto}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.card.recue{border:2px solid var(--red);animation:pulse 1.2s infinite}.card.expiree{border:2px solid var(--amber)}
+@keyframes pulse{50%{box-shadow:0 0 0 6px rgba(214,43,43,.25)}}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.num{font-size:26px;font-weight:800}
+.badge{font-size:12px;font-weight:800;padding:4px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:.4px}
+.b-recue{background:var(--red)}.b-acceptee{background:#1f5fb4}.b-prete{background:var(--green)}.b-expiree{background:var(--amber);color:#111}
+.b-recuperee,.b-refusee,.b-absente{background:#333;color:#ccc}
+.when{font-size:17px;font-weight:700}.meta{color:var(--muted);font-size:14px}
+ul{margin:0;padding-left:0;list-style:none}li{padding:4px 0;border-bottom:1px dashed var(--line)}li b{color:var(--gold);margin-right:6px}
+.note{background:#2a2312;border-left:3px solid var(--gold);padding:8px 10px;border-radius:8px;font-size:15px}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row button{flex:1;min-width:70px}
+.acc{background:var(--green);color:#fff}.ref{background:#3a1d1d;color:#ffb4b4}.sec{background:#2b2b2b;color:var(--txt)}
+.big{font-size:18px;padding:16px}
+.empty{color:var(--muted);text-align:center;padding:60px 10px}
+#login{max-width:360px;margin:15vh auto;padding:20px;text-align:center}#login input{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--txt);font-size:17px;margin:14px 0}
+#login button{width:100%;background:var(--red);color:#fff}.err{color:#ff9b9b;font-size:14px;min-height:20px}
+#soundBar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:#1b0f0f;border-top:1px solid #5a2020;display:flex;gap:10px;align-items:center;z-index:9}
+#soundBar span{flex:1;font-size:14px;color:#ffd0d0}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}.kpi b{display:block;font-size:24px}
+dialog{background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:16px;max-width:420px;width:92vw}dialog input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#111;color:var(--txt);font-size:17px;margin:10px 0}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div id="login" class="hide">
+  <h2 style="color:var(--gold)">Aroma Gourmet</h2>
+  <p class="meta">Commandes en ligne — accès restaurant</p>
+  <form id="loginForm"><input type="password" id="pw" placeholder="Mot de passe" autocomplete="current-password" required><button>Se connecter</button></form>
+  <p class="err" id="loginErr"></p>
+</div>
+
+<div id="app" class="hide">
+  <header>
+    <h1>Commandes · Aroma</h1>
+    <span class="pill" id="tgPill">Notifications…</span>
+    <span class="pill" id="netPill">Connexion…</span>
+    <button class="sec" id="pauseBtn">Pause</button>
+  </header>
+  <div class="tabs"><button class="on" data-tab="active">En cours</button><button data-tab="history">Historique</button></div>
+  <main id="view"></main>
+</div>
+
+<div id="soundBar" class="hide"><span>🔈 Touchez « Activer le son » pour entendre les nouvelles commandes sur cet appareil.</span><button class="acc" id="soundBtn">Activer le son</button></div>
+
+<dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const money = n => (n ?? 0).toFixed(2).replace(".", ",") + " $";
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const LBL = {recue:"Nouvelle",acceptee:"Acceptée",prete:"Prête",recuperee:"Récupérée",refusee:"Refusée",absente:"Absent",expiree:"Non confirmée"};
+let tab = "active", data = null, known = new Set(), first = true, audio = null, alarm = null, wakeLock = null;
+
+async function api(path, body){
+  const r = await fetch(path, body ? { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify(body) } : {});
+  const j = await r.json().catch(() => ({ ok:false, message:"Réponse invalide" }));
+  if(r.status === 401 && path !== "/api/admin/login"){ show("login"); throw new Error("auth"); }
+  return j;
+}
+function show(which){ $("#login").classList.toggle("hide", which !== "login"); $("#app").classList.toggle("hide", which !== "app"); }
+
+$("#loginForm").onsubmit = async e => {
+  e.preventDefault(); $("#loginErr").textContent = "";
+  const j = await api("/api/admin/login", { password: $("#pw").value });
+  if(!j.ok){ $("#loginErr").textContent = j.message; return; }
+  $("#pw").value = ""; start();
+};
+
+/* Son : les navigateurs exigent un toucher avant de jouer un son. */
+function beep(){
+  if(!audio) return;
+  const t = audio.currentTime;
+  [0, .25, .5].forEach((d, i) => { const o = audio.createOscillator(), g = audio.createGain();
+    o.type = "square"; o.frequency.value = i === 1 ? 1320 : 880; g.gain.setValueAtTime(.0001, t+d); g.gain.exponentialRampToValueAtTime(.6, t+d+.02); g.gain.exponentialRampToValueAtTime(.0001, t+d+.2);
+    o.connect(g).connect(audio.destination); o.start(t+d); o.stop(t+d+.22); });
+}
+$("#soundBtn").onclick = async () => {
+  audio = audio || new (window.AudioContext || window.webkitAudioContext)(); await audio.resume(); beep();
+  $("#soundBar").classList.add("hide");
+  try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
+};
+document.addEventListener("visibilitychange", async () => { if(!document.hidden && audio){ try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {} } });
+function updateAlarm(){
+  const pending = data?.orders.some(o => o.status === "recue");
+  if(pending && !alarm){ beep(); alarm = setInterval(beep, 4000); }
+  if(!pending && alarm){ clearInterval(alarm); alarm = null; }
+}
+
+async function load(){
+  try {
+    data = await api("/api/admin/orders?scope=" + (tab === "history" ? "history&days=30" : "active"));
+    $("#netPill").textContent = "En ligne"; $("#netPill").className = "pill ok";
+  } catch(e){ if(e.message === "auth") return; $("#netPill").textContent = "Hors ligne !"; $("#netPill").className = "pill bad"; return; }
+  if(!data.ok) return;
+  const t = data.notif, err = t.lastError && Date.now() - t.lastError.ts < 3600000;
+  $("#tgPill").textContent = !t.resto ? "Notifications NON configurées" : err ? "Notification en échec !" : "Notifications OK";
+  $("#tgPill").className = "pill " + (t.resto && !err ? "ok" : "bad");
+  $("#pauseBtn").textContent = data.paused ? "Reprendre" : "Pause"; $("#pauseBtn").className = data.paused ? "ref" : "sec";
+  for(const o of data.orders) if(!known.has(o.id)){ known.add(o.id); }
+  first = false; render(); updateAlarm();
+}
+
+function card(o){
+  const items = o.items.map(l => `<li><b>${l.qty}×</b>${esc(l.name)}</li>`).join("");
+  const created = new Date(o.created_at).toLocaleTimeString("fr-CA", { hour:"2-digit", minute:"2-digit" });
+  let actions = "";
+  if((o.status === "recue" || o.status === "expiree") && o.preorder) actions =
+    `<div class="row"><button class="acc big" data-a="accept" data-id="${o.id}" data-m="20">✅ Confirmer pour ${esc(o.slot_label)}</button></div>
+     <div class="row"><button class="ref" data-a="refuse" data-id="${o.id}">Refuser</button></div>`;
+  else if(o.status === "recue" || o.status === "expiree") actions =
+    `<div class="meta">Prête dans :</div><div class="row">${[10,15,20,30,45].map(m => `<button class="acc big" data-a="accept" data-id="${o.id}" data-m="${m}">${m} min</button>`).join("")}</div>
+     <div class="row"><button class="ref" data-a="refuse" data-id="${o.id}">Refuser</button></div>`;
+  else if(o.status === "acceptee") actions = `<div class="row"><button class="acc big" data-a="ready" data-id="${o.id}">🔔 Prête</button><button class="sec" data-a="picked" data-id="${o.id}">✔ Récupérée</button></div>
+     <div class="row"><button class="ref" data-a="refuse" data-id="${o.id}">Annuler</button></div>`;
+  else if(o.status === "prete") actions = `<div class="row"><button class="acc big" data-a="picked" data-id="${o.id}">✔ Récupérée / payée</button><button class="ref" data-a="noshow" data-id="${o.id}">Client absent</button></div>`;
+  const eta = o.status === "acceptee" && o.prep_min && !o.preorder ? ` · prête vers ${new Date(Math.max(o.accepted_at + o.prep_min*60000, 0)).toLocaleTimeString("fr-CA",{hour:"2-digit",minute:"2-digit"})}` : "";
+  return `<div class="card ${o.status}">
+    <div class="top"><span class="num">${esc(o.num)}</span><span class="badge b-${o.status}">${o.preorder && o.status==="recue" ? "Précommande" : LBL[o.status]}</span></div>
+    <div class="when">${esc(o.mode)} · ${esc(o.slot_label)}${eta}</div>
+    <div class="meta">${esc(o.name || "—")} · ${o.phone ? `<a style="color:var(--gold)" href="tel:+1${esc(o.phone)}">${esc(o.phone.replace(/(\d{3})(\d{3})(\d{4})/, "$1 $2-$3"))}</a>` : "—"} · reçue à ${created}</div>
+    <ul>${items}</ul>
+    ${o.blocked ? `<div class="note" style="border-color:var(--red)">⛔ Numéro bloqué <button class="sec" data-a="unblock" data-id="${o.id}">Débloquer</button></div>`
+      : o.absences >= 2 ? `<div class="note" style="border-color:var(--red)">⚠️ Ce numéro n'est pas venu ${o.absences} fois. <button class="ref" data-a="block" data-id="${o.id}">Bloquer ce numéro</button></div>` : ""}
+    ${o.note ? `<div class="note">📝 ${esc(o.note)}</div>` : ""}
+    <div class="top"><span class="meta">Sous-total (avant taxes)</span><b>${money(o.subtotal)}</b></div>
+    ${o.refuse_reason ? `<div class="meta">Motif : ${esc(o.refuse_reason)}</div>` : ""}
+    ${actions}</div>`;
+}
+
+function render(){
+  if(tab === "active"){
+    const open = data.orders.filter(o => ["recue","expiree","acceptee","prete"].includes(o.status));
+    const done = data.orders.filter(o => !open.includes(o));
+    $("#view").innerHTML = (open.length ? `<div class="grid">${open.map(card).join("")}</div>` : `<div class="empty">Aucune commande en cours.<br>Les nouvelles commandes apparaissent ici automatiquement.</div>`) +
+      (done.length ? `<h3 class="meta" style="margin-top:24px">Terminées (3 dernières heures)</h3><div class="grid">${done.map(card).join("")}</div>` : "");
+    return;
+  }
+  const os = data.orders, by = s => os.filter(o => o.status === s);
+  const honored = by("recuperee"), paid = honored.reduce((s, o) => s + (o.paid_amount || 0), 0);
+  const src = {}; os.forEach(o => { const k = o.utm_source || "direct"; src[k] = src[k] || { n:0, ok:0, sub:0 }; src[k].n++; if(o.status === "recuperee"){ src[k].ok++; src[k].sub += o.subtotal; } });
+  $("#view").innerHTML = `<div class="kpis">
+      <div class="kpi"><span class="meta">Reçues (30 j)</span><b>${os.length}</b></div>
+      <div class="kpi"><span class="meta">Acceptées</span><b>${os.filter(o => ["acceptee","prete","recuperee","absente"].includes(o.status)).length}</b></div>
+      <div class="kpi"><span class="meta">Récupérées</span><b>${honored.length}</b></div>
+      <div class="kpi"><span class="meta">Ventes récupérées (avant taxes)</span><b>${money(honored.reduce((s,o)=>s+o.subtotal,0))}</b></div>
+      <div class="kpi"><span class="meta">Encaissé saisi</span><b>${money(paid)}</b></div>
+      <div class="kpi"><span class="meta">Absents / refusées / non confirmées</span><b>${by("absente").length} / ${by("refusee").length} / ${by("expiree").length}</b></div></div>
+    <h3 class="meta">Par source</h3>
+    <table><tr><th>Source</th><th>Reçues</th><th>Récupérées</th><th>Ventes</th></tr>${Object.entries(src).map(([k,v]) => `<tr><td>${esc(k)}</td><td>${v.n}</td><td>${v.ok}</td><td>${money(v.sub)}</td></tr>`).join("")}</table>
+    <h3 class="meta" style="margin-top:20px">Commandes</h3>
+    <table><tr><th>N°</th><th>Date</th><th>Statut</th><th>Total</th><th>Source</th></tr>${os.map(o => `<tr><td>${esc(o.num)}</td><td>${new Date(o.created_at).toLocaleString("fr-CA",{dateStyle:"short",timeStyle:"short"})}</td><td>${LBL[o.status]}</td><td>${money(o.subtotal)}</td><td>${esc(o.utm_source || "direct")}${o.utm_campaign ? " · " + esc(o.utm_campaign) : ""}</td></tr>`).join("")}</table>
+    <p style="margin-top:20px"><button class="sec" id="testTg">Test notification restaurant</button> <button class="sec" id="testAg">Test notification Azure Muse</button> <button class="sec" id="logout">Se déconnecter</button></p>`;
+}
+
+function ask(html){ return new Promise(res => { $("#dlgForm").innerHTML = html; const d = $("#dlg"); d.onclose = () => res(d.returnValue); d.showModal(); }); }
+
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-tab]");
+  if(t){ tab = t.dataset.tab; document.querySelectorAll("[data-tab]").forEach(b => b.classList.toggle("on", b === t)); return load(); }
+  if(e.target.id === "testTg" || e.target.id === "testAg"){ const j = await api("/api/admin/test-notification", { target: e.target.id === "testAg" ? "agency" : "resto" }); alertBox(j.ok ? "Notification envoyée. Vérifiez le téléphone." : j.message); return; }
+  if(e.target.id === "logout"){ await api("/api/admin/logout", {}); return show("login"); }
+  if(e.target.id === "pauseBtn"){
+    const v = await ask(data.paused ? `<p>Reprendre les commandes en ligne ?</p><div class="row"><button value="no" class="sec">Non</button><button value="yes" class="acc">Reprendre</button></div>`
+      : `<p><b>Mettre en pause ?</b><br><span class="meta">Les clients ne pourront plus commander en ligne et seront invités à appeler.</span></p><div class="row"><button value="no" class="sec">Non</button><button value="yes" class="ref">Pause</button></div>`);
+    if(v === "yes"){ await api("/api/admin/pause", { paused: !data.paused }); load(); } return;
+  }
+  const b = e.target.closest("[data-a]"); if(!b) return;
+  const id = b.dataset.id, a = b.dataset.a; let body = {};
+  if(a === "accept") body.prepMin = +b.dataset.m;
+  if(a === "refuse"){
+    const r = await ask(`<p><b>Motif du refus</b> <span class="meta">(le client le verra)</span></p>
+      <div class="row" style="flex-direction:column"><button value="rupture" class="sec">Produit en rupture</button><button value="complet" class="sec">Trop de commandes</button><button value="ferme" class="sec">Fermé / autre</button><button value="" class="ref">Annuler</button></div>`);
+    if(!r) return; body.reason = r;
+  }
+  if(a === "picked"){
+    const v = await ask(`<p><b>Commande récupérée</b><br><span class="meta">Montant encaissé, taxes comprises (facultatif) :</span></p><input name="paid" id="paid" inputmode="decimal" placeholder="Ex. 32,15">
+      <div class="row"><button value="cancel" class="sec">Annuler</button><button value="ok" class="acc">Valider</button></div>`);
+    if(v !== "ok") return; body.paid = parseFloat(($("#paid").value || "").replace(",", "."));
+  }
+  if(a === "block"){ const v = await ask(`<p>Bloquer ce numéro ? Il ne pourra plus commander en ligne (il pourra toujours appeler).</p><div class="row"><button value="no" class="sec">Non</button><button value="yes" class="ref">Bloquer</button></div>`); if(v !== "yes") return; }
+  if(a === "noshow"){ const v = await ask(`<p>Le client n'est pas venu ? Après 2 absences, vous pourrez décider de bloquer son numéro.</p><div class="row"><button value="no" class="sec">Non</button><button value="yes" class="ref">Confirmer</button></div>`); if(v !== "yes") return; }
+  b.disabled = true;
+  const j = await api(`/api/admin/orders/${id}/${a}`, body);
+  if(!j.ok) alertBox(j.message);
+  load();
+});
+function alertBox(msg){ ask(`<p>${esc(msg)}</p><div class="row"><button value="ok" class="acc">OK</button></div>`); }
+
+function start(){ show("app"); $("#soundBar").classList.toggle("hide", !!audio); load(); }
+setInterval(() => { if(!$("#app").classList.contains("hide") && tab === "active") load(); }, 8000);
+(async () => { const r = await fetch("/api/admin/orders?scope=active"); if(r.status === 401) show("login"); else start(); })();
+</script>
+</body>
+</html>
