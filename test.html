@@ -857,7 +857,7 @@ async function pollTrack(){
         prete: '<p><b>🔔 Votre commande est prête&nbsp;!</b> Présentez-vous au comptoir.</p>',
         recuperee: '<p><b>Bon appétit&nbsp;!</b></p>',
         refusee: '<p><b>❌ Le restaurant ne peut pas préparer cette commande.</b> ' + esc(t.refuseReason || "") + ' Appelez le ' + esc(CONFIG.telDisplay) + ' si besoin.</p>',
-        expiree: '<p><b>Le restaurant n\'a pas encore confirmé.</b> Appelez le <a href="tel:+1' + CONFIG.tel + '">' + esc(CONFIG.telDisplay) + '</a> en donnant le numéro ' + esc(o.num) + '.</p>',
+        expiree: '<p><b>⚠️ Le restaurant n\'a pas confirmé votre commande.</b> Elle n\'est pas garantie : <b>ne vous déplacez pas</b> avant d\'avoir appelé le <a href="tel:+1' + CONFIG.tel + '">' + esc(CONFIG.telDisplay) + '</a> en donnant le numéro ' + esc(o.num) + '.</p>',
         absente: '<p>Commande clôturée.</p>'
       }[t.status];
       if(msg) box.innerHTML = msg;
