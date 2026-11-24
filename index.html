@@ -235,9 +235,12 @@ const CONFIG = {
   maps: "https://www.google.com/maps/search/?api=1&query=1651+rue+Ontario+Est+Montr%C3%A9al",
   // Le restaurant ne livre pas lui-même : la livraison passe par Uber Eats.
   uberEats: "https://www.ubereats.com/ca-fr/store/aroma-gourmet/RjftZDDYXX-YyPR5PmC5Vw",
-  // Canaux de notification (ntfy.sh — gratuit, sans compte) :
-  // le premier est celui du restaurant, le second une copie pour Azure Muse.
-  ntfy: ["aroma-gourmet-cmd-9k4m2x7p", "azuremuse-aroma-copie-5t8n3w6q"],
+  // Serveur sécurisé des commandes (Cloudflare Worker, dossier worker/).
+  // Aucune clé secrète ici : les clés sont stockées dans Cloudflare.
+  api: "https://aroma-gourmet-commandes.A_REMPLIR.workers.dev",
+  turnstileSiteKey: "A_REMPLIR",   // clé PUBLIQUE Turnstile (anti-robot)
+  // Pixel Meta : chargé seulement si le visiteur accepte la mesure publicitaire.
+  metaPixelId: "",
 
   // Google Ads. Coller ici l'étiquette (label) de chaque action de conversion
   // créée dans Google Ads : la conversion est alors comptée automatiquement.
@@ -300,7 +303,7 @@ function track(event, key, params){
   Le restaurant ne livre pas lui-même&nbsp;; la livraison passe par Uber Eats, aux prix de la plateforme.
   Le paiement se fait au comptoir, à l'arrivée.
   <div class="halal">Tous nos produits sont halal.</div>
-  <div class="halal"><b>Confidentialité.</b> Le nom et le numéro de téléphone saisis servent uniquement à préparer votre commande et à vous joindre à son sujet&nbsp;; ils ne sont ni vendus ni utilisés à des fins publicitaires. Cette page utilise la balise Google pour mesurer l'efficacité de nos publicités. Pour toute question ou demande d'accès ou de suppression de vos renseignements (Loi 25), appelez le restaurant au 438 531-6482.</div>
+  <div class="halal"><b>Confidentialité.</b> Le nom et le numéro de téléphone saisis servent uniquement à préparer votre commande et à vous joindre à son sujet&nbsp;; ils ne sont ni vendus ni utilisés à des fins publicitaires. Ils sont conservés 90 jours, puis effacés automatiquement&nbsp;; seuls le restaurant et Azure Muse, son prestataire, y ont accès. Les commandes sont hébergées chez Cloudflare, en Amérique du Nord, et protégées par une vérification anti-robot. Cette page utilise la balise Google pour mesurer l'efficacité de nos publicités, et les témoins Meta seulement si vous l'acceptez. Pour toute question ou demande d'accès ou de suppression de vos renseignements (Loi 25), appelez le restaurant au 438 531-6482.</div>
 </footer>
 
 <div class="bar" id="bar" hidden>
@@ -487,6 +490,17 @@ function count(){
 }
 
 /* ================= Heures & créneaux ================= */
+// Heure de Montréal, même si l'appareil du client est réglé sur un autre fuseau.
+function mtlNow(){
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", year:"numeric", month:"2-digit",
+    day:"2-digit", hour:"2-digit", minute:"2-digit", second:"2-digit", hourCycle:"h23" }).formatToParts(new Date()).map(x => [x.type, x.value]));
+  return new Date(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+}
+function slotIso(offset, m){
+  const d = mtlNow(); d.setDate(d.getDate() + offset);
+  const z = n => String(n).padStart(2, "0");
+  return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate()) + "T" + z(Math.floor(m / 60)) + ":" + z(m % 60);
+}
 function hhmmToMin(s){ const [h, m] = s.split(":").map(Number); return h * 60 + m; }
 function minToHHMM(t){
   const h = Math.floor(t / 60) % 24, m = t % 60;
@@ -497,14 +511,14 @@ function todayWindow(d){
   return w ? { open: hhmmToMin(w[0]), close: hhmmToMin(w[1]) } : null;
 }
 function isOpenNow(){
-  const now = new Date(), w = todayWindow(now);
+  const now = mtlNow(), w = todayWindow(now);
   if(!w) return false;
   const t = now.getHours() * 60 + now.getMinutes();
   return t >= w.open && t <= w.close - CONFIG.lastOrderMin;
 }
 // Créneaux d'un jour donné (offset 0 = aujourd'hui), à partir de la minute "from".
 function daySlots(offset, from){
-  const d = new Date(); d.setDate(d.getDate() + offset);
+  const d = mtlNow(); d.setDate(d.getDate() + offset);
   const w = todayWindow(d);
   if(!w) return [];
   let start = Math.max(w.open, from);
@@ -517,7 +531,7 @@ function daySlots(offset, from){
 // La date est toujours écrite pour les autres jours : le restaurant lit la précommande le lendemain.
 function dayLabel(offset){
   if(offset === 0) return "aujourd'hui,";
-  const d = new Date(); d.setDate(d.getDate() + offset);
+  const d = mtlNow(); d.setDate(d.getDate() + offset);
   const j = ["dim.","lun.","mar.","mer.","jeu.","ven.","sam."][d.getDay()];
   const m = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."][d.getMonth()];
   return (offset === 1 ? "demain, " : "") + j + " " + d.getDate() + " " + m + ",";
@@ -526,27 +540,27 @@ function dayLabel(offset){
 // Fermé : précommande, uniquement aux heures d'ouverture —
 // plus tard aujourd'hui si le resto n'a pas encore ouvert, sinon le prochain jour d'ouverture.
 function slots(){
-  const now = new Date();
+  const now = mtlNow();
   const t = now.getHours() * 60 + now.getMinutes();
   if(isOpenNow()){
     const today = daySlots(0, t + CONFIG.leadMin);
-    if(today.length) return today.map(minToHHMM);
+    if(today.length) return today.map(m => ({ v: slotIso(0, m), l: minToHHMM(m) }));
   }
   for(let off = 0; off <= 7; off++){
     const list = daySlots(off, off === 0 ? t + CONFIG.leadMin : 0);
     if(list.length){
       const lbl = dayLabel(off);
-      return list.map(m => lbl.charAt(0).toUpperCase() + lbl.slice(1) + " " + minToHHMM(m));
+      return list.map(m => ({ v: slotIso(off, m), l: lbl.charAt(0).toUpperCase() + lbl.slice(1) + " " + minToHHMM(m) }));
     }
   }
   return [];
 }
-function isPreorder(){ return !isOpenNow() || !daySlots(0, new Date().getHours() * 60 + new Date().getMinutes() + CONFIG.leadMin).length; }
+function isPreorder(){ const n = mtlNow(); return !isOpenNow() || !daySlots(0, n.getHours() * 60 + n.getMinutes() + CONFIG.leadMin).length; }
 
 /* ================= Rendu du menu ================= */
 function renderStatus(){
   const box = $("#statusBox");
-  const w = todayWindow(new Date());
+  const w = todayWindow(mtlNow());
 
   // Mode menu seul : un bandeau qui renvoie vers le téléphone.
   if(!CONFIG.ordersEnabled){
@@ -563,14 +577,14 @@ function renderStatus(){
   if(!isPreorder()){
     const sl = slots();
     box.innerHTML = '<div class="status open"><b>Ouvert maintenant.</b> ' +
-      (sl.length ? 'Prochain créneau&nbsp;: ' + esc(sl[0]) + '. Comptez environ ' + CONFIG.leadMin + ' minutes de préparation.' : '') +
+      (sl.length ? 'Prochain créneau&nbsp;: ' + esc(sl[0].l) + '. Comptez environ ' + CONFIG.leadMin + ' minutes de préparation.' : '') +
       '</div>';
   } else {
     const jours = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
     box.innerHTML = '<div class="status closed"><b>' + (isOpenNow() ? 'Les commandes en ligne sont terminées pour aujourd\'hui.' : 'Le restaurant est fermé pour l\'instant.') + '</b> ' +
       (w ? 'Aujourd\'hui&nbsp;: ' + minToHHMM(w.open) + ' à ' + minToHHMM(w.close) + '. '
-         : 'Fermé le ' + jours[new Date().getDay()] + '. ') +
-      (slots().length ? 'Vous pouvez précommander dès maintenant, à partir de ' + esc(slots()[0].toLowerCase()) + '.' : '') + '</div>';
+         : 'Fermé le ' + jours[mtlNow().getDay()] + '. ') +
+      (slots().length ? 'Vous pouvez précommander dès maintenant, à partir de ' + esc(slots()[0].l.toLowerCase()) + '.' : '') + '</div>';
   }
 }
 
@@ -704,8 +718,8 @@ function renderSheet(){
           '<label class="fld"><span>Heure d\'arrivée</span>' +
             '<select name="heure" required>' +
               '<option value="">Choisir une heure…</option>' +
-              (isPreorder() ? '' : '<option value="Dès que possible">Dès que possible</option>') +
-              sl.map(s => '<option value="' + esc(s) + '">' + esc(s) + '</option>').join("") +
+              (isPreorder() ? '' : '<option value="asap">Dès que possible</option>') +
+              sl.map(s => '<option value="' + esc(s.v) + '">' + esc(s.l) + '</option>').join("") +
             '</select>' +
           '</label>' +
           '<div class="err" id="errHeure" hidden>Choisissez une heure.</div>' +
@@ -727,9 +741,11 @@ function renderSheet(){
           '<div class="trow big"><span>Sous-total</span><span>' + money(subtotal()) + '</span></div>' +
           '<p class="taxnote">Taxes et paiement au comptoir.</p>' +
         '</div>' +
-        '<button class="cta wide" type="submit" id="submitBtn">Préparer la commande</button>' +
+        '<div id="tsBox" style="margin:0 0 14px;min-height:65px"></div>' +
+        '<button class="cta wide" type="submit" id="submitBtn">Envoyer la commande</button>' +
         '<div class="err" id="errSend" hidden></div>' +
       '</form>';
+    mountTurnstile();
     return;
   }
 
@@ -739,15 +755,14 @@ function renderSheet(){
     b.innerHTML =
       '<div class="done">' +
         '<div class="tick">✓</div>' +
-        '<h2>C\'est parti, ' + esc(o.nom.split(" ")[0]) + '&nbsp;!</h2>' +
-        '<p>' + (o.pre ? 'Le restaurant a reçu votre précommande pour ' + esc(o.heure.toLowerCase()) + '. ' : 'Le restaurant a reçu votre commande. ') + 'Donnez votre numéro ou votre nom au comptoir.</p>' +
+        '<h2>Merci, ' + esc(o.nom.split(" ")[0]) + '&nbsp;!</h2>' +
+        '<div id="trackBox"><p>Commande envoyée. <b>En attente de confirmation du restaurant…</b> Gardez cette page ouverte.</p></div>' +
       '</div>' +
       '<div class="ticket">' +
         '<div class="lbl">Numéro de commande</div>' +
         '<div class="num">' + esc(o.num) + '</div>' +
         '<dl>' +
           '<dt>Nom</dt><dd>' + esc(o.nom) + '</dd>' +
-          '<dt>Téléphone</dt><dd>' + esc(o.tel) + '</dd>' +
           '<dt>Service</dt><dd>' + esc(o.mode) + '</dd>' +
           '<dt>Heure</dt><dd>' + esc(o.heure) + '</dd>' +
           '<dt>Sous-total</dt><dd>' + money(o.total) + '</dd>' +
@@ -761,54 +776,90 @@ function renderSheet(){
       '</div>' +
       '<p class="copyline">Un problème avec votre commande&nbsp;? Appelez le <b>' + CONFIG.telDisplay + '</b> ' +
         'en donnant le numéro <b>' + esc(o.num) + '</b>.</p>';
+    pollTrack();
     return;
   }
 }
 
 /* ================= Envoi ================= */
-function orderNumber(){
-  const d = new Date();
-  const p = n => String(n).padStart(2, "0");
-  return "AG" + p(d.getDate()) + p(d.getHours()) + p(d.getMinutes()) + p(Math.floor(Math.random() * 100));
+// Identifiants techniques (aucune donnée personnelle) : appareil, anti-doublon, provenance publicitaire.
+const store = { get(k, area){ try { return JSON.parse((area || localStorage).getItem(k)); } catch(e){ return null; } },
+                set(k, v, area){ try { (area || localStorage).setItem(k, JSON.stringify(v)); } catch(e){} } };
+function deviceId(){ let d = store.get("ag_dev"); if(!d){ d = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set("ag_dev", d); } return d; }
+function captureUtm(){
+  const q = new URLSearchParams(location.search), u = {};
+  ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","fbclid","gclid"].forEach(k => { if(q.get(k)) u[k] = q.get(k).slice(0, 120); });
+  if(Object.keys(u).length) store.set("ag_utm", Object.assign({ at: Date.now() }, u), sessionStorage);
+}
+function cookie(n){ const m = document.cookie.match(new RegExp("(?:^|; )" + n + "=([^;]*)")); return m ? decodeURIComponent(m[1]) : ""; }
+
+/* Consentement à la mesure publicitaire Meta (Loi 25) : rien n'est chargé sans un « J'accepte ». */
+function consentGiven(){ return store.get("ag_consent") === "oui"; }
+function loadPixel(){
+  if(!CONFIG.metaPixelId || window.fbq) return;
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;
+  s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  fbq("init", CONFIG.metaPixelId); fbq("track", "PageView");
+}
+function consentBanner(){
+  if(!CONFIG.metaPixelId) return;
+  if(consentGiven()) return loadPixel();
+  if(store.get("ag_consent") === "non") return;
+  const d = document.createElement("div");
+  d.setAttribute("role", "region"); d.setAttribute("aria-label", "Mesure publicitaire");
+  d.style.cssText = "position:fixed;left:12px;right:12px;bottom:12px;z-index:60;background:#111;color:#f4f1ea;border:1px solid #333;border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.4;box-shadow:0 8px 30px rgba(0,0,0,.5)";
+  d.innerHTML = 'Acceptez-vous que nous mesurions l\'efficacité de nos publicités Facebook et Instagram (témoins Meta)&nbsp;? Facultatif.' +
+    '<div style="display:flex;gap:8px;margin-top:10px"><button type="button" data-c="non" style="flex:1;padding:10px;border-radius:10px;border:1px solid #444;background:#222;color:#fff">Refuser</button>' +
+    '<button type="button" data-c="oui" style="flex:1;padding:10px;border-radius:10px;border:0;background:#c8102e;color:#fff;font-weight:700">J\'accepte</button></div>';
+  d.addEventListener("click", e => { const c = e.target.dataset.c; if(!c) return; store.set("ag_consent", c); d.remove(); if(c === "oui") loadPixel(); });
+  document.body.appendChild(d);
 }
 
-function orderText(o){
-  const lines = o.lines.map(l => "  " + l.qty + " x " + l.name + "   " + money(l.price * l.qty)).join("\n");
-  return (o.pre ? "PRECOMMANDE  " : "NOUVELLE COMMANDE  ") + o.num + "\n" +
-    (o.pre ? "A preparer pour : " + o.heure + "\n" : "") +
-    "----------------------------\n" +
-    o.mode.toUpperCase() + "  ·  " + o.heure + "\n" +
-    "Nom : " + o.nom + "\n" +
-    "Tel : " + o.tel + "\n" +
-    "----------------------------\n" +
-    lines + "\n" +
-    "----------------------------\n" +
-    "Sous-total : " + money(o.total) + "   (taxes au comptoir)\n" +
-    (o.note ? "NOTE : " + o.note + "\n" : "") +
-    "Reçue à " + o.recue;
+/* Turnstile : vérification anti-robot de Cloudflare, contrôlée ensuite par le serveur. */
+let tsWidget = null;
+function mountTurnstile(){
+  const box = $("#tsBox"); if(!box) return;
+  const go = () => { try { tsWidget = turnstile.render(box, { sitekey: CONFIG.turnstileSiteKey, language: "fr", theme: "dark" }); } catch(e){} };
+  if(window.turnstile) return go();
+  if(!document.getElementById("tsScript")){
+    const sc = document.createElement("script"); sc.id = "tsScript"; sc.async = true;
+    sc.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"; document.head.appendChild(sc);
+  }
+  const wait = setInterval(() => { if(window.turnstile){ clearInterval(wait); if($("#tsBox")) go(); } }, 200);
 }
 
-// Les en-têtes HTTP n'acceptent pas les accents : on les retire du titre seulement.
-// Le corps du message, lui, part en UTF-8 et garde tous les accents.
-function ascii(s){
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "")
-          .replace(/œ/g, "oe").replace(/Œ/g, "OE")
-          .replace(/[^\x20-\x7E]/g, "");
+async function sendOrder(payload){
+  const r = await fetch(CONFIG.api + "/api/orders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+  const j = await r.json().catch(() => ({ ok: false, message: "Le serveur ne répond pas." }));
+  if(!j.ok){ const e = new Error(j.message || "Erreur"); e.code = j.code; throw e; }
+  return j;
 }
 
-async function sendOrder(o){
-  const body = orderText(o);
-  const title = ascii((o.pre ? "PRECOMMANDE " : "Commande ") + o.num + " - " + o.mode.toUpperCase() + " - " + o.heure);
-  const results = await Promise.allSettled(
-    CONFIG.ntfy.map(topic => fetch("https://ntfy.sh/" + topic, {
-      method: "POST",
-      headers: { "Title": title, "Priority": "urgent", "Tags": "hamburger" },
-      body: body
-    }).then(r => { if(!r.ok) throw new Error("HTTP " + r.status); return r; }))
-  );
-  const ok = results.some(r => r.status === "fulfilled");
-  if(!ok) throw new Error(results.map(r => r.reason && r.reason.message).join(" / "));
-  return true;
+/* Suivi en direct : envoyée → acceptée (avec heure) / refusée. */
+let trackTimer = null;
+async function pollTrack(){
+  clearTimeout(trackTimer);
+  const o = lastOrder; if(!o || !o.token) return;
+  try {
+    const t = await (await fetch(CONFIG.api + "/api/track/" + encodeURIComponent(o.token))).json();
+    const box = $("#trackBox");
+    if(box && t.ok){
+      const hm = ms => new Date(ms).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit", timeZone: "America/Toronto" });
+      const msg = {
+        recue: '<p>Commande envoyée. <b>En attente de confirmation du restaurant…</b> Gardez cette page ouverte.</p>',
+        acceptee: '<p><b>✅ Acceptée par le restaurant.</b> ' + (t.readyAt ? 'Prête vers ' + hm(t.readyAt) + '.' : 'Elle sera prête pour ' + esc(t.slotLabel.toLowerCase()) + '.') + '</p>',
+        prete: '<p><b>🔔 Votre commande est prête&nbsp;!</b> Présentez-vous au comptoir.</p>',
+        recuperee: '<p><b>Bon appétit&nbsp;!</b></p>',
+        refusee: '<p><b>❌ Le restaurant ne peut pas préparer cette commande.</b> ' + esc(t.refuseReason || "") + ' Appelez le ' + esc(CONFIG.telDisplay) + ' si besoin.</p>',
+        expiree: '<p><b>Le restaurant n\'a pas encore confirmé.</b> Appelez le <a href="tel:+1' + CONFIG.tel + '">' + esc(CONFIG.telDisplay) + '</a> en donnant le numéro ' + esc(o.num) + '.</p>',
+        absente: '<p>Commande clôturée.</p>'
+      }[t.status];
+      if(msg) box.innerHTML = msg;
+      if(["recuperee","refusee","absente"].includes(t.status)) { store.set("ag_last", null); return; }
+    }
+  } catch(e){}
+  trackTimer = setTimeout(pollTrack, 8000);
 }
 
 /* ================= Événements ================= */
@@ -884,37 +935,46 @@ document.addEventListener("submit", async e => {
   btn.textContent = "Envoi au restaurant…";
   $("#errSend").hidden = true;
 
-  const now = new Date();
-  const o = {
-    num: orderNumber(),
-    pre: isPreorder(),
-    mode: mode.value,
-    heure,
-    nom,
-    tel: f.tel.value.trim(),
-    note: f.note.value.trim(),
-    lines: cartLines(),
-    total: subtotal(),
-    recue: now.getHours() + " h " + String(now.getMinutes()).padStart(2, "0")
+  const sel = f.heure.options[f.heure.selectedIndex];
+  const tsToken = window.turnstile && tsWidget !== null ? turnstile.getResponse(tsWidget) : "";
+  if(!tsToken){
+    btn.disabled = false; btn.textContent = "Envoyer la commande";
+    const box = $("#errSend"); box.hidden = false; box.textContent = "Patientez une seconde : la vérification anti-robot se termine, puis réessayez.";
+    return;
+  }
+  const fbclid = (store.get("ag_utm", sessionStorage) || {}).fbclid;
+  const payload = {
+    idem: (window.__agIdem = window.__agIdem || (Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2))),
+    items: cartLines().map(l => ({ key: l.key, qty: l.qty, name: l.name })),
+    mode: mode.value, slot: heure, name: nom, phone: f.tel.value.trim(), note: f.note.value.trim(),
+    turnstile: tsToken, device: deviceId(), utm: store.get("ag_utm", sessionStorage) || {},
+    consent: consentGiven(), fbp: consentGiven() ? cookie("_fbp") : "", fbc: consentGiven() ? (cookie("_fbc") || (fbclid ? "fb.1." + Date.now() + "." + fbclid : "")) : "",
+    page: location.href.split("#")[0].slice(0, 300)
   };
 
   try {
-    await sendOrder(o);
+    const res = await sendOrder(payload);
+    const o = { num: res.num, token: res.token, pre: res.preorder, mode: mode.value, heure: res.slotLabel || sel.text,
+                nom, total: res.subtotal, at: Date.now() };
     const conv = { transaction_id: o.num, value: o.total, currency: "CAD" };
     track("commande_envoyee", "commande", conv);
     track(o.mode === "Sur place" ? "commande_sur_place" : "commande_a_emporter",
           o.mode === "Sur place" ? "surplace" : "emporter", conv);
-    lastOrder = o;
+    if(consentGiven() && window.fbq) fbq("track", "Lead", { value: o.total, currency: "CAD" }, { eventID: "lead-" + o.num });
+    lastOrder = o; window.__agIdem = null;
+    store.set("ag_last", o);
     step = "done";
     renderSheet();
     $(".panel").scrollTop = 0;
   } catch(err){
     btn.disabled = false;
     btn.textContent = "Réessayer";
+    if(window.turnstile && tsWidget !== null) try { turnstile.reset(tsWidget); } catch(e){}
     const box = $("#errSend");
     box.hidden = false;
-    box.innerHTML = "L'envoi a échoué. Réessayez, ou appelez directement le restaurant au " +
+    box.innerHTML = esc(err.message && err.code ? err.message : "L'envoi a échoué.") + " Vous pouvez aussi appeler le restaurant au " +
       '<a href="tel:+1' + CONFIG.tel + '" style="color:var(--red)">' + CONFIG.telDisplay + "</a>.";
+    if(err.code === "menu_changed") box.innerHTML += ' <a href="" style="color:var(--red)">Recharger la page</a>';
   }
 });
 
@@ -940,10 +1000,22 @@ if(!CONFIG.ordersEnabled){
 $("#mapsLink").href = CONFIG.maps;
 $("#telLink").href = "tel:+1" + CONFIG.tel;
 $("#telLink2").href = "tel:+1" + CONFIG.tel;
+captureUtm();
 renderStatus();
 renderMenu();
 renderBar();
 setInterval(renderStatus, 60000);
+consentBanner();
+// Commande en cours (moins de 12 h) : on la retrouve en rouvrant la page.
+{ const last = store.get("ag_last"); if(last && Date.now() - last.at < 12 * 3600000){ lastOrder = last; openSheet("done"); } }
+// Filet de sécurité : si le serveur est en panne, en pause, ou si le téléphone du resto n'est pas relié,
+// la page repasse toute seule en « menu + appeler ».
+if(CONFIG.ordersEnabled){
+  fetch(CONFIG.api + "/api/status").then(r => r.json()).then(st => { if(!st.accepting) throw 0; })
+    .catch(() => { CONFIG.ordersEnabled = false; cart.clear();
+      document.querySelector(".tagline").innerHTML = "Burgers au pain maison · Montréal<br>Notre menu complet, avec les prix.";
+      renderStatus(); renderMenu(); renderBar(); });
+}
 </script>
 <script>
 /* Burger Original en vitrine : il se pose, flotte et s'incline vers le doigt ou la souris. */

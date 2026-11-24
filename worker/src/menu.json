@@ -1,0 +1,478 @@
+[
+ {
+  "id": "rabais",
+  "name": "Menu rabais",
+  "items": [
+   {
+    "name": "Trio Burger Original",
+    "price": 13.99
+   },
+   {
+    "name": "Trio Burger Suprême",
+    "price": 13.99
+   }
+  ]
+ },
+ {
+  "id": "burgers",
+  "name": "Burgers",
+  "items": [
+   {
+    "name": "Burger Original",
+    "price": 13.5
+   },
+   {
+    "name": "Burger Suprême",
+    "price": 13.5
+   },
+   {
+    "name": "Burger Poulet grillé",
+    "price": 13.5
+   },
+   {
+    "name": "Burger Truffe",
+    "price": 14
+   },
+   {
+    "name": "Burger Guacamole",
+    "price": 14
+   },
+   {
+    "name": "Burger Royal bacon et œuf",
+    "price": 14
+   },
+   {
+    "name": "Burger Poulet frit",
+    "price": 14
+   }
+  ]
+ },
+ {
+  "id": "trios",
+  "name": "Faire un trio",
+  "items": [
+   {
+    "name": "Trio frites",
+    "price": 5.5
+   },
+   {
+    "name": "Trio salade",
+    "price": 5.5
+   },
+   {
+    "name": "Trio poutine",
+    "price": 6.5
+   }
+  ]
+ },
+ {
+  "id": "sandwichs",
+  "name": "Sandwichs",
+  "items": [
+   {
+    "name": "Sandwich mixte",
+    "price": 16
+   },
+   {
+    "name": "Sandwich bœuf",
+    "price": 16
+   },
+   {
+    "name": "Sandwich poulet",
+    "price": 16
+   }
+  ]
+ },
+ {
+  "id": "wraps",
+  "name": "Wraps",
+  "items": [
+   {
+    "name": "Wrap poulet frit et œuf",
+    "price": 13.5
+   },
+   {
+    "name": "Wrap steak haché",
+    "price": 13
+   },
+   {
+    "name": "Wrap poulet grillé",
+    "price": 13.5
+   }
+  ]
+ },
+ {
+  "id": "poutines",
+  "name": "Poutines",
+  "items": [
+   {
+    "name": "Poutine classique — régulière",
+    "price": 11
+   },
+   {
+    "name": "Poutine steak haché — régulière",
+    "price": 14.5
+   },
+   {
+    "name": "Poutine poulet grillé — régulière",
+    "price": 14.5
+   },
+   {
+    "name": "Poutine classique — grande",
+    "price": 15
+   },
+   {
+    "name": "Poutine poulet grillé — grande",
+    "price": 22.5
+   },
+   {
+    "name": "Poutine steak haché — grande",
+    "price": 22.5
+   },
+   {
+    "name": "Poutine bœuf braisé — grande",
+    "price": 24
+   }
+  ]
+ },
+ {
+  "id": "salades",
+  "name": "Salades",
+  "items": [
+   {
+    "name": "Salade Sakura",
+    "price": 11
+   },
+   {
+    "name": "Salade à composer",
+    "price": 12.5
+   },
+   {
+    "name": "Salade Betterave et feta",
+    "price": 13
+   },
+   {
+    "name": "Salade Poulet grillé",
+    "price": 14
+   },
+   {
+    "name": "Salade Burrata",
+    "price": 16
+   }
+  ]
+ },
+ {
+  "id": "ailes",
+  "name": "Ailes de poulet frit",
+  "items": [
+   {
+    "name": "6 ailes — nature",
+    "price": 10
+   },
+   {
+    "name": "12 ailes — nature",
+    "price": 16
+   },
+   {
+    "name": "24 ailes — nature",
+    "price": 28
+   },
+   {
+    "name": "6 ailes — ail et miel",
+    "price": 10
+   },
+   {
+    "name": "12 ailes — ail et miel",
+    "price": 16
+   },
+   {
+    "name": "22 ailes — ail et miel",
+    "price": 28
+   },
+   {
+    "name": "6 ailes — thaï chili doux",
+    "price": 10
+   },
+   {
+    "name": "12 ailes — thaï chili doux",
+    "price": 16
+   },
+   {
+    "name": "24 ailes — thaï chili doux",
+    "price": 28
+   },
+   {
+    "name": "6 ailes — barbecue",
+    "price": 10
+   },
+   {
+    "name": "12 ailes — barbecue",
+    "price": 16
+   },
+   {
+    "name": "24 ailes — barbecue",
+    "price": 28
+   }
+  ]
+ },
+ {
+  "id": "entrees",
+  "name": "Entrées et accompagnements",
+  "items": [
+   {
+    "name": "Petite frite maison",
+    "price": 4
+   },
+   {
+    "name": "Grande frite maison",
+    "price": 7
+   },
+   {
+    "name": "Hummus",
+    "price": 6.5
+   },
+   {
+    "name": "Rouleaux impériaux végé (2)",
+    "price": 7
+   },
+   {
+    "name": "Rouleaux impériaux au poulet (2)",
+    "price": 7
+   },
+   {
+    "name": "Fleur d'oignon frit",
+    "price": 8
+   },
+   {
+    "name": "Guacamole",
+    "price": 8
+   },
+   {
+    "name": "Sauté de champignons",
+    "price": 8
+   }
+  ]
+ },
+ {
+  "id": "extras",
+  "name": "Extras",
+  "items": [
+   {
+    "name": "Extra fromage",
+    "price": 1
+   },
+   {
+    "name": "Extra bacon",
+    "price": 2
+   },
+   {
+    "name": "Extra poulet grillé",
+    "price": 2
+   },
+   {
+    "name": "Extra poulet croustillant",
+    "price": 2
+   }
+  ]
+ },
+ {
+  "id": "sauces",
+  "name": "Sauces",
+  "items": [
+   {
+    "name": "Sauce chipotle",
+    "price": 0.99
+   },
+   {
+    "name": "Sauce BBQ",
+    "price": 0.99
+   },
+   {
+    "name": "Sauce mayo épicée",
+    "price": 0.99
+   },
+   {
+    "name": "Sauce truffe",
+    "price": 2
+   }
+  ]
+ },
+ {
+  "id": "croffles",
+  "name": "Croffles et gaufres",
+  "items": [
+   {
+    "name": "Croffle Original",
+    "price": 4.99
+   },
+   {
+    "name": "Croffle Chocolette Bella",
+    "price": 6.99
+   },
+   {
+    "name": "Croffle Pistache Crousti",
+    "price": 9.95
+   },
+   {
+    "name": "Gaufre",
+    "price": 7
+   }
+  ]
+ },
+ {
+  "id": "croffles-extra",
+  "name": "Garnitures pour croffles",
+  "items": [
+   {
+    "name": "Sucre",
+    "price": 0.5
+   },
+   {
+    "name": "Caramel",
+    "price": 1.5
+   },
+   {
+    "name": "Sirop chocolat noir",
+    "price": 1.5
+   },
+   {
+    "name": "Sirop chocolat blanc",
+    "price": 1.5
+   },
+   {
+    "name": "Sirop d'érable",
+    "price": 1.5
+   },
+   {
+    "name": "Sirop citrouille épicée",
+    "price": 1.5
+   },
+   {
+    "name": "Lait condensé",
+    "price": 1.5
+   },
+   {
+    "name": "Lotus Biscoff",
+    "price": 1.75
+   },
+   {
+    "name": "Oreo",
+    "price": 1.75
+   },
+   {
+    "name": "Mangue",
+    "price": 1.75
+   },
+   {
+    "name": "Fraise",
+    "price": 1.75
+   },
+   {
+    "name": "Nutella",
+    "price": 2
+   },
+   {
+    "name": "Crème chantilly",
+    "price": 2
+   },
+   {
+    "name": "Chocolat noisette crémeuse",
+    "price": 2
+   }
+  ]
+ },
+ {
+  "id": "desserts",
+  "name": "Desserts",
+  "items": [
+   {
+    "name": "Tiramisu",
+    "price": 6
+   },
+   {
+    "name": "Crème brûlée",
+    "price": 6
+   }
+  ]
+ },
+ {
+  "id": "smoothies",
+  "name": "Smoothies et matcha",
+  "items": [
+   {
+    "name": "Draco-Dragon",
+    "price": 7.95
+   },
+   {
+    "name": "Matcha fraise (16 oz)",
+    "price": 8.5
+   },
+   {
+    "name": "Mango-Tango",
+    "price": 8.99
+   }
+  ]
+ },
+ {
+  "id": "boissons",
+  "name": "Boissons",
+  "items": [
+   {
+    "name": "Eau 500 ml",
+    "price": 2
+   },
+   {
+    "name": "Eau gazéifiée Perrier",
+    "price": 2.5
+   },
+   {
+    "name": "Canette Coca-Cola",
+    "price": 2
+   },
+   {
+    "name": "Canette Coca-Cola Zéro",
+    "price": 2
+   },
+   {
+    "name": "Canette Coca-Cola Diète",
+    "price": 2
+   },
+   {
+    "name": "Canette Pepsi",
+    "price": 2
+   },
+   {
+    "name": "Canette 7UP",
+    "price": 2
+   },
+   {
+    "name": "Canette Sprite",
+    "price": 2
+   },
+   {
+    "name": "Canette Canada Dry",
+    "price": 2
+   },
+   {
+    "name": "Canette Orangina",
+    "price": 3
+   },
+   {
+    "name": "Canette Fuze",
+    "price": 2
+   },
+   {
+    "name": "Canette Ice Tea",
+    "price": 2
+   },
+   {
+    "name": "Jus d'orange",
+    "price": 2
+   },
+   {
+    "name": "Jus de pomme",
+    "price": 2
+   }
+  ]
+ }
+]

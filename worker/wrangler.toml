@@ -1,0 +1,29 @@
+# Un déploiement par restaurant. Pour un nouveau client : copier ce fichier,
+# changer name + database_name/id, adapter src/restaurant.js.
+name = "aroma-gourmet-commandes"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[vars]
+ENV = "prod"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "aroma-gourmet-commandes"
+database_id = "A_REMPLIR_APRES_CREATION"
+
+[triggers]
+crons = ["* * * * *"]
+
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
+# Environnement de test séparé (base distincte, aucun vrai client).
+[env.test]
+name = "aroma-gourmet-commandes-test"
+vars = { ENV = "dev" }
+d1_databases = [ { binding = "DB", database_name = "aroma-gourmet-commandes-test", database_id = "A_REMPLIR_APRES_CREATION" } ]
+triggers = { crons = ["* * * * *"] }
