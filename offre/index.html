@@ -59,6 +59,15 @@ h1{font-family:"Cormorant Garamond",serif;font-weight:700;font-size:44px;line-he
 .call{background:linear-gradient(180deg,#f0c56c,#d9a54a);color:var(--ink);box-shadow:0 12px 30px rgba(227,182,95,.3)}
 .ghost{border:1px solid rgba(227,182,95,.55);color:var(--gold)}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.gift{position:relative;margin:26px 0 4px;padding:22px 18px 20px;border-radius:18px;background:linear-gradient(150deg,#2a140a,#160b06);border:1px dashed rgba(227,182,95,.7);opacity:0;animation:up .7s 1.5s forwards}
+.gift::before,.gift::after{content:"";position:absolute;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:50%;background:var(--ink)}
+.gift::before{left:-12px}.gift::after{right:-12px}
+.gift h2{font-family:"Cormorant Garamond",serif;font-weight:700;font-size:30px;line-height:1.1;color:var(--gold)}
+.gift p{margin-top:8px;font-size:15px;line-height:1.5;color:rgba(246,238,224,.9)}
+.gift small{display:block;margin-top:6px;font-size:12.5px;color:rgba(246,238,224,.6)}
+.dl{margin-top:14px;width:100%;border:0;cursor:pointer;font:inherit;background:var(--red);color:#fff;box-shadow:0 10px 26px rgba(196,34,33,.45)}
+.dl svg{width:20px;height:20px}
 footer{margin-top:30px;font-size:13px;line-height:1.75;color:rgba(246,238,224,.6);animation-delay:1.75s}
 footer strong{color:var(--gold);font-weight:600}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;opacity:1!important}.badge{transform:translateX(-50%)}}
@@ -83,6 +92,17 @@ footer strong{color:var(--gold);font-weight:600}
     <p class="live a" id="live"><i class="dot" id="dot"></i><span id="liveTxt"></span></p>
 
     
+
+    
+    <section class="gift">
+      <h2>Frites offertes</h2>
+      <p>Téléchargez cette image et montrez-la au comptoir lors de votre prochaine commande sur place : une portion de frites vous est offerte.</p>
+      <button class="btn dl" id="dl" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        Télécharger mon coupon
+      </button>
+      <small>Offre valable sur place, au comptoir.</small>
+    </section>
 
     <div class="btns a">
       <a class="btn call" href="tel:+14385316482">
@@ -120,6 +140,36 @@ footer strong{color:var(--gold);font-weight:600}
     else if(d==='Fri'||d==='Sat'||d==='Sun'){dot.className='dot off';txt.textContent='De retour lundi dès 11 h';}
     else{dot.className='dot off';txt.textContent='De retour demain dès 11 h';}
   }catch(e){document.getElementById('live').style.display='none'}
+})();
+</script>
+
+<script>
+(function(){
+  var btn=document.getElementById('dl'); if(!btn) return;
+  function load(src){return new Promise(function(ok,ko){var i=new Image();i.onload=function(){ok(i)};i.onerror=ko;i.src=src;});}
+  btn.addEventListener('click',async function(){
+    try{
+      if(document.fonts&&document.fonts.ready) await document.fonts.ready;
+      var W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d');
+      var g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#24110a');g.addColorStop(1,'#0d0705');x.fillStyle=g;x.fillRect(0,0,W,H);
+      var photo=await load(document.querySelector('.card img').src);
+      var pw=860,ph=photo.height*pw/photo.width; ph=Math.min(ph,640);
+      x.save();x.beginPath();x.roundRect?x.roundRect((W-pw)/2,250,pw,ph,36):x.rect((W-pw)/2,250,pw,ph);x.clip();
+      var sh=photo.width*ph/pw; x.drawImage(photo,0,(photo.height-sh)/2,photo.width,sh,(W-pw)/2,250,pw,ph);x.restore();
+      var logo=await load(document.querySelector('.logo').src); var lw=330,lh=logo.height*lw/logo.width; x.drawImage(logo,(W-lw)/2,30,lw,lh);
+      x.setLineDash([14,10]);x.strokeStyle='rgba(227,182,95,.8)';x.lineWidth=4;x.strokeRect(40,40-20,W-80,H-40);x.setLineDash([]);
+      x.textAlign='center';
+      x.fillStyle='#c42221';var bw=520,by=250+ph+40;x.beginPath();x.roundRect?x.roundRect((W-bw)/2,by,bw,74,37):x.rect((W-bw)/2,by,bw,74);x.fill();
+      x.fillStyle='#fff';x.font='800 34px Inter, sans-serif';x.fillText('COUPON EXCLUSIF',W/2,by+49);
+      x.fillStyle='#e3b65f';x.font='700 104px "Cormorant Garamond", serif';x.fillText('Frites offertes',W/2,by+190);
+      x.fillStyle='#f6eee0';x.font='500 34px Inter, sans-serif';
+      x.fillText('Montrez ce coupon au comptoir',W/2,by+262);x.fillText('lors de votre prochaine commande sur place.',W/2,by+306);
+      x.fillStyle='rgba(246,238,224,.65)';x.font='400 28px Inter, sans-serif';x.fillText('Aroma Gourmet · 1651, rue Ontario Est, Montréal',W/2,H-60);
+      var blob=await new Promise(function(r){c.toBlob(r,'image/png')}); var file=new File([blob],'coupon-aroma-frites.png',{type:'image/png'});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){ try{await navigator.share({files:[file],title:'Coupon Aroma Gourmet'});return;}catch(e){if(e&&e.name==='AbortError')return;} }
+      var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='coupon-aroma-frites.png';document.body.appendChild(a);a.click();a.remove();
+    }catch(e){alert('Faites une capture d\u2019écran de cette page et montrez-la au comptoir.');}
+  });
 })();
 </script>
 </body>
